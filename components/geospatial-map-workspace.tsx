@@ -4,7 +4,13 @@ import { Maximize2, Pause, Play, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
 import Map, { Marker } from "react-map-gl/maplibre";
+import { setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+
+if (typeof window !== "undefined") {
+  // Official MapLibre v6 API to bypass Webpack ESM worker bundling
+  setWorkerUrl("/maplibre-gl-worker.js");
+}
 import {
   type SpatialBounds,
   type IncidentPoint,
@@ -401,28 +407,38 @@ export function GeospatialMapWorkspace() {
     return MARKER_COLORS[hash % MARKER_COLORS.length];
   };
 
+  const mapDimensions = { width: "100%", height: "100%" };
+  const currentMapStyle = isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE;
+
+  // Fallback coordinates (center of US) in case viewState is undefined
+  const fallbackViewState = {
+    longitude: -98.5795,
+    latitude: 39.8283,
+    zoom: 3,
+    pitch: 45
+  };
+
   return (
     <div
-      className={`relative h-full min-h-[640px] overflow-hidden bg-[#F4F4F0] dark:bg-[#01161E] ${
+      className={`relative w-full h-[800px] min-h-[800px] rounded-xl overflow-hidden bg-gray-900 ${
         isFullscreenMap ? "fixed inset-0 z-50 min-h-screen" : ""
       }`}
     >
       <DeckGL
+        initialViewState={fallbackViewState}
         viewState={viewState}
         onViewStateChange={onViewStateChange}
         controller={true}
         layers={layers}
         effects={[lightingEffect]}
         getTooltip={getTooltip as any}
-        style={{ width: "100%", height: "100%" }}
+        style={mapDimensions}
       >
         <Map
-          {...viewState}
-          style={{ width: "100%", height: "100%" }}
-          mapStyle={isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
-          reuseMaps
+          style={mapDimensions}
+          mapStyle={currentMapStyle}
+          reuseMaps={true}
           attributionControl={false}
-          interactive={false} // CRITICAL: Stops MapLibre from fighting DeckGL for camera control
         >
           {activeLayer === "PINS" &&
             visibleIncidents.map((incident) => (
