@@ -47,8 +47,8 @@ function EvidenceBox() {
   }
 
   return (
-    <div className="absolute left-4 top-4 z-10 w-48 border-4 border-black bg-white p-3 font-mono text-black shadow-[4px_4px_0_black] rounded-none">
-      <div className="mb-3 border-b-2 border-black pb-2 text-xs font-bold uppercase tracking-normal">
+    <div className="absolute left-4 top-4 z-10 w-48 border-4 border-[var(--ink)] bg-[var(--panel)] p-3 font-mono shadow-[4px_4px_0_var(--ink)] rounded-none">
+      <div className="mb-3 border-b-2 border-[var(--ink)] pb-2 text-xs font-bold uppercase tracking-normal">
         Evidence Box
       </div>
       <div className="space-y-2">
@@ -57,7 +57,7 @@ function EvidenceBox() {
             key={item.nodeType}
             draggable
             onDragStart={(event) => handleDragStart(event, item.nodeType)}
-            className="cursor-grab border-2 border-black bg-[#F4F4F0] px-3 py-2 text-xs font-bold uppercase shadow-[3px_3px_0_black] active:cursor-grabbing rounded-none"
+            className="cursor-grab border-2 border-[var(--ink)] bg-[var(--paper)] px-3 py-2 text-xs font-bold uppercase shadow-[3px_3px_0_var(--ink)] active:cursor-grabbing rounded-none"
           >
             {item.label}
           </div>
@@ -100,7 +100,7 @@ function BoardCanvas() {
   }
 
   return (
-    <div className="relative h-full w-full bg-[#F4F4F0]">
+    <div className="relative h-full w-full bg-[var(--paper)]">
       <EvidenceBox />
       <ReactFlow
         nodes={nodes}
@@ -112,11 +112,11 @@ function BoardCanvas() {
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         fitView
-        className="bg-[#F4F4F0]"
+        className="bg-[var(--paper)]"
       >
         <Background
           variant={BackgroundVariant.Dots}
-          color="#000000"
+          color="var(--dim)"
           gap={24}
           size={1}
         />

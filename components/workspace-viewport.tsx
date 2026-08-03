@@ -15,9 +15,9 @@ function WorkspaceFrame({
   children: ReactNode;
 }) {
   return (
-    <div className="h-full overflow-y-auto bg-[#F4F4F0] p-4">
-      <section className="min-h-full border-4 border-black bg-white shadow-[4px_4px_0_black] rounded-none">
-        <div className="border-b-4 border-black bg-[#F4F4F0] px-4 py-3">
+    <div className="h-full overflow-y-auto bg-[var(--paper)] p-4">
+      <section className="min-h-full border-4 border-[var(--ink)] bg-[var(--panel)] shadow-[4px_4px_0_var(--ink)] rounded-none">
+        <div className="border-b-4 border-[var(--ink)] bg-[var(--paper)] px-4 py-3">
           <h2 className="font-serif text-3xl font-black uppercase leading-none">
             {title}
           </h2>

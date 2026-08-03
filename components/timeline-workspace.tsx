@@ -733,22 +733,22 @@ export function TimelineWorkspace() {
   const isHeatmapMode = zoomLevel === 0;
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden bg-[#F4F4F0]">
+    <div className="relative flex h-full flex-col overflow-hidden bg-[#F4F4F0] dark:bg-[#01161E]">
       {/* ─── TOP TOOLBAR ──────────────────────────── */}
-      <div className="shrink-0 border-b-4 border-black bg-[#F4F4F0]">
-        <div className="flex items-center justify-between border-b-4 border-black bg-black px-4 py-3">
-          <h2 className="font-serif text-2xl font-black uppercase leading-none text-white md:text-3xl">
+      <div className="shrink-0 border-b-4 border-black bg-[#F4F4F0] dark:border-b-[1px] dark:border-[#598392] dark:bg-[#124559]">
+        <div className="flex items-center justify-between border-b-4 border-black bg-black px-4 py-3 dark:border-b-[1px] dark:border-[#598392] dark:bg-[#01161E]">
+          <h2 className="font-serif text-2xl font-black uppercase leading-none text-white md:text-3xl dark:text-[#EFF6E0]">
             Timeline Analysis
           </h2>
-          <div className="flex items-center gap-2 font-mono text-[10px] font-black uppercase text-white">
+          <div className="flex items-center gap-2 font-mono text-[10px] font-black uppercase text-white dark:text-[#EFF6E0]">
             <span className="hidden md:inline">{filteredEvents.length} Events Loaded</span>
-            <span className="inline-block h-2 w-2 animate-pulse bg-[#D22B2B]" />
+            <span className="inline-block h-2 w-2 animate-pulse bg-[#D22B2B] dark:bg-[#AEC3B0]" />
             <span>LIVE</span>
           </div>
         </div>
 
         {/* Controls strip */}
-        <div className="flex flex-wrap items-center gap-3 px-4 py-3 font-mono text-xs font-black uppercase">
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 font-mono text-xs font-black uppercase dark:text-[#EFF6E0]">
           {/* Date range */}
           <div className="flex items-center gap-2">
             <label className="flex items-center gap-1">
@@ -757,41 +757,41 @@ export function TimelineWorkspace() {
                 type="date"
                 value={timeRange[0]}
                 onChange={(e) => setTimeRange([e.target.value, timeRange[1]])}
-                className="border-4 border-black bg-white px-2 py-1.5 shadow-[3px_3px_0_black] focus:outline-none"
+                className="border-4 border-black bg-white px-2 py-1.5 shadow-[3px_3px_0_black] focus:outline-none dark:border-[1px] dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0] dark:shadow-none"
               />
             </label>
-            <span className="text-black/40">→</span>
+            <span className="text-black/40 dark:text-[#598392]">→</span>
             <label className="flex items-center gap-1">
               TO
               <input
                 type="date"
                 value={timeRange[1]}
                 onChange={(e) => setTimeRange([timeRange[0], e.target.value])}
-                className="border-4 border-black bg-white px-2 py-1.5 shadow-[3px_3px_0_black] focus:outline-none"
+                className="border-4 border-black bg-white px-2 py-1.5 shadow-[3px_3px_0_black] focus:outline-none dark:border-[1px] dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0] dark:shadow-none"
               />
             </label>
           </div>
 
-          <div className="h-6 w-[4px] bg-black hidden md:block" />
+          <div className="h-6 w-[4px] bg-black hidden md:block dark:bg-[#598392]" />
 
           {/* Zoom controls */}
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-black/60">ZOOM</span>
+            <span className="text-[10px] text-black/60 dark:text-[#598392]">ZOOM</span>
             <button
               type="button"
               onClick={() => setZoomLevel((z) => Math.max(z - 0.5, 0))}
-              className="flex h-8 w-8 items-center justify-center border-4 border-black bg-white shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+              className="flex h-8 w-8 items-center justify-center border-4 border-black bg-white shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none dark:border-[1px] dark:border-[#598392] dark:bg-[#01161E] dark:shadow-none"
             >
               <ZoomOut size={14} strokeWidth={3} />
             </button>
-            <div className="flex h-8 w-28 items-center border-4 border-black bg-white px-1">
-              <div className="relative h-1 w-full bg-black/20">
+            <div className="flex h-8 w-28 items-center border-4 border-black bg-white px-1 dark:border-[1px] dark:border-[#598392] dark:bg-[#01161E]">
+              <div className="relative h-1 w-full bg-black/20 dark:bg-[#598392]/30">
                 <div
-                  className="absolute left-0 top-0 h-full bg-black transition-all"
+                  className="absolute left-0 top-0 h-full bg-black transition-all dark:bg-[#598392]"
                   style={{ width: `${(zoomLevel / 3) * 100}%` }}
                 />
                 <div
-                  className="absolute top-1/2 h-4 w-2 -translate-y-1/2 border-2 border-black bg-[#D22B2B] transition-all"
+                  className="absolute top-1/2 h-4 w-2 -translate-y-1/2 border-2 border-black bg-[#D22B2B] transition-all dark:border-[#AEC3B0] dark:bg-[#AEC3B0]"
                   style={{ left: `${(zoomLevel / 3) * 100}%`, marginLeft: "-4px" }}
                 />
               </div>
@@ -799,7 +799,7 @@ export function TimelineWorkspace() {
             <button
               type="button"
               onClick={() => setZoomLevel((z) => Math.min(z + 0.5, 3))}
-              className="flex h-8 w-8 items-center justify-center border-4 border-black bg-white shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+              className="flex h-8 w-8 items-center justify-center border-4 border-black bg-white shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none dark:border-[1px] dark:border-[#598392] dark:bg-[#01161E] dark:shadow-none"
             >
               <ZoomIn size={14} strokeWidth={3} />
             </button>
@@ -808,7 +808,7 @@ export function TimelineWorkspace() {
             </span>
           </div>
 
-          <div className="h-6 w-[4px] bg-black hidden md:block" />
+          <div className="h-6 w-[4px] bg-black hidden md:block dark:bg-[#598392]" />
 
           {/* Brush toggle */}
           <button
@@ -818,10 +818,10 @@ export function TimelineWorkspace() {
               setBrushStart(null);
               setBrushEnd(null);
             }}
-            className={`flex h-8 items-center gap-1.5 border-4 border-black px-3 shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ${
+            className={`flex h-8 items-center gap-1.5 border-4 border-black px-3 shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none dark:border-[1px] dark:shadow-none ${
               brushActive
-                ? "bg-[#D22B2B] text-white"
-                : "bg-white hover:-translate-x-0.5 hover:-translate-y-0.5"
+                ? "bg-[#D22B2B] text-white dark:border-[#AEC3B0] dark:bg-[#AEC3B0] dark:text-[#01161E]"
+                : "bg-white hover:-translate-x-0.5 hover:-translate-y-0.5 dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0] hover:dark:border-[#AEC3B0] hover:dark:text-[#AEC3B0]"
             }`}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="square">
@@ -839,19 +839,19 @@ export function TimelineWorkspace() {
               setBrushStart(null);
               setBrushEnd(null);
             }}
-            className="flex h-8 items-center gap-1 border-4 border-black bg-[#FCD34D] px-3 shadow-[3px_3px_0_black] active:translate-x-1 active:translate-y-1 active:shadow-none"
+            className="flex h-8 items-center gap-1 border-4 border-black bg-[#FCD34D] px-3 shadow-[3px_3px_0_black] active:translate-x-1 active:translate-y-1 active:shadow-none dark:border-[1px] dark:border-[#AEC3B0] dark:bg-[#124559] dark:text-[#AEC3B0] dark:shadow-none hover:dark:bg-[#AEC3B0] hover:dark:text-[#01161E]"
           >
             RESET
           </button>
         </div>
 
         {/* Category legend */}
-        <div className="flex flex-wrap gap-2 border-t-2 border-black/20 px-4 py-2 font-mono text-[10px] font-black uppercase">
+        <div className="flex flex-wrap gap-2 border-t-2 border-black/20 px-4 py-2 font-mono text-[10px] font-black uppercase dark:border-[#598392] dark:text-[#EFF6E0]">
           {(Object.entries(CATEGORY_COLORS) as [EventCategory, string][]).map(
             ([category, color]) => (
               <span key={category} className="flex items-center gap-1">
                 <span
-                  className="inline-block h-3 w-3 border-2 border-black"
+                  className="inline-block h-3 w-3 border-2 border-black dark:border-[1px] dark:border-[#598392] dark:!bg-[#01161E]"
                   style={{ backgroundColor: color }}
                 />
                 {category}
@@ -865,8 +865,8 @@ export function TimelineWorkspace() {
       <div className="relative flex-1 overflow-hidden">
         {isHeatmapMode ? (
           /* ─── DENSITY HEATMAP MODE ─────────────── */
-          <div className="h-full border-4 border-black bg-white mx-4 my-4 shadow-[4px_4px_0_black]">
-            <div className="border-b-4 border-black bg-[#F4F4F0] px-4 py-2 font-mono text-[10px] font-black uppercase">
+          <div className="h-full border-4 border-black bg-white mx-4 my-4 shadow-[4px_4px_0_black] dark:border-[1px] dark:border-[#598392] dark:bg-[#124559] dark:shadow-none">
+            <div className="border-b-4 border-black bg-[#F4F4F0] px-4 py-2 font-mono text-[10px] font-black uppercase dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0]">
               Activity Density Heatmap — {densityBuckets.length} Active Days
             </div>
             <DensityHeatmapView
@@ -896,7 +896,7 @@ export function TimelineWorkspace() {
             >
               {/* ─── AXIS LINE ──────────────────────── */}
               <div
-                className="absolute border-t-4 border-black"
+                className="absolute border-t-4 border-black dark:border-t-[1px] dark:border-[#598392]"
                 style={{
                   top: "60%",
                   left: 0,
@@ -914,8 +914,8 @@ export function TimelineWorkspace() {
                     top: "calc(60% + 12px)",
                   }}
                 >
-                  <div className="border-l-4 border-black pl-2 py-1">
-                    <span className="bg-black px-1.5 py-0.5 text-white">
+                  <div className="border-l-4 border-black pl-2 py-1 dark:border-l-[1px] dark:border-[#598392]">
+                    <span className="bg-black px-1.5 py-0.5 text-white dark:border-[1px] dark:border-[#598392] dark:bg-[#124559] dark:text-[#AEC3B0]">
                       {formatDate(seg.date)}
                     </span>
                     {seg.eventCount > 1 && (
@@ -1000,7 +1000,7 @@ export function TimelineWorkspace() {
 
                     {/* Vertical connector stem */}
                     <div
-                      className="absolute w-0 border-l-[3px] border-dashed border-black/40"
+                      className="absolute w-0 border-l-[3px] border-dashed border-black/40 dark:border-l-[1px] dark:border-[#598392]"
                       style={{
                         left: "12px",
                         top: "14%",
@@ -1028,22 +1028,22 @@ export function TimelineWorkspace() {
                       onMouseLeave={() => setHoveredEvent(null)}
                     >
                       <div
-                        className={`border-4 p-2 font-mono text-[10px] font-black uppercase leading-tight transition-shadow ${
+                        className={`border-4 p-2 font-mono text-[10px] font-black uppercase leading-tight transition-shadow dark:text-[#EFF6E0] ${
                           isSelected
-                            ? "border-black bg-[#FCD34D] shadow-[6px_6px_0_black]"
+                            ? "border-black bg-[#FCD34D] shadow-[6px_6px_0_black] dark:border-[1px] dark:border-[#AEC3B0] dark:bg-[#124559] dark:shadow-none"
                             : isSuspectLinked
-                              ? "border-[#D22B2B] bg-[#D22B2B]/10 shadow-[6px_6px_0_#D22B2B]"
-                              : "border-black bg-white shadow-[4px_4px_0_black] hover:shadow-[6px_6px_0_black]"
+                              ? "border-[#D22B2B] bg-[#D22B2B]/10 shadow-[6px_6px_0_#D22B2B] dark:border-[1px] dark:border-[#AEC3B0] dark:bg-[#124559] dark:shadow-none"
+                              : "border-black bg-white shadow-[4px_4px_0_black] hover:shadow-[6px_6px_0_black] dark:border-[1px] dark:border-[#598392] dark:bg-[#124559] dark:shadow-none dark:hover:shadow-none"
                         }`}
                       >
                         {/* Suspect-linked badge */}
                         {isSuspectLinked && (
-                          <div className="absolute -left-2 -top-2 flex h-5 items-center gap-0.5 border-2 border-[#D22B2B] bg-[#D22B2B] px-1 text-[8px] text-white">
+                          <div className="absolute -left-2 -top-2 flex h-5 items-center gap-0.5 border-2 border-[#D22B2B] bg-[#D22B2B] px-1 text-[8px] text-white dark:border-[1px] dark:border-[#AEC3B0] dark:bg-[#124559] dark:text-[#AEC3B0]">
                             ● LINKED
                           </div>
                         )}
                         <div
-                          className="mb-1 inline-block px-1 py-0.5 text-[9px] text-white"
+                          className="mb-1 inline-block px-1 py-0.5 text-[9px] text-white dark:border-[1px] dark:border-[#598392] dark:!bg-[#01161E] dark:text-[#AEC3B0]"
                           style={{
                             backgroundColor: CATEGORY_COLORS[event.category],
                           }}
@@ -1059,17 +1059,15 @@ export function TimelineWorkspace() {
                           {Array.from({ length: 10 }, (_, i) => (
                             <div
                               key={i}
-                              className="h-[4px] flex-1"
-                              style={{
-                                backgroundColor:
-                                  i < event.severity
-                                    ? event.severity >= 8
-                                      ? "#D22B2B"
-                                      : event.severity >= 5
-                                        ? "#D97706"
-                                        : "#059669"
-                                    : "#e5e5e5",
-                              }}
+                              className={`h-[4px] flex-1 ${
+                                i < event.severity
+                                  ? event.severity >= 8
+                                    ? "bg-[#D22B2B] dark:bg-[#AEC3B0]"
+                                    : event.severity >= 5
+                                      ? "bg-[#D97706] dark:bg-[#AEC3B0]"
+                                      : "bg-[#059669] dark:bg-[#AEC3B0]"
+                                  : "bg-[#e5e5e5] dark:bg-[#598392]"
+                              }`}
                             />
                           ))}
                         </div>
@@ -1084,11 +1082,11 @@ export function TimelineWorkspace() {
 
                     {/* Node dot on axis */}
                     <div
-                      className={`absolute h-5 w-5 border-4 transition-all ${
+                      className={`absolute h-5 w-5 border-4 transition-all dark:border-[1px] dark:border-[#598392] dark:!bg-[#01161E] ${
                         isSelected
-                          ? "scale-125 border-black bg-[#FCD34D]"
+                          ? "scale-125 border-black bg-[#FCD34D] dark:!border-[#AEC3B0]"
                           : isSuspectLinked
-                            ? "scale-125 border-[#D22B2B] bg-[#D22B2B]"
+                            ? "scale-125 border-[#D22B2B] bg-[#D22B2B] dark:!border-[#AEC3B0]"
                             : "border-black bg-white"
                       }`}
                       style={{

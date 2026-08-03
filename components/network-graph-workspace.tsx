@@ -16,6 +16,7 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import { FileSearch, MapPin, Phone, ReceiptText, UserRound } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useInvestigationStore } from "@/store/use-investigation-store";
 
 type GraphNodeKind = "suspect" | "evidence" | "location" | "transaction";
@@ -52,10 +53,10 @@ type CaseGraphLink = {
   label: string;
 };
 
-const linkFilters: { id: LinkKind; label: string; tone: string }[] = [
-  { id: "financial", label: "Financial Transactions", tone: "#D22B2B" },
-  { id: "phone", label: "Phone Calls", tone: "#111111" },
-  { id: "colocation", label: "Co-Locations", tone: "#FCD34D" },
+const linkFilters: { id: LinkKind; label: string; tone: string; darkTone: string }[] = [
+  { id: "financial", label: "Financial Transactions", tone: "#D22B2B", darkTone: "#AEC3B0" },
+  { id: "phone", label: "Phone Calls", tone: "#111111", darkTone: "#EFF6E0" },
+  { id: "colocation", label: "Co-Locations", tone: "#FCD34D", darkTone: "#598392" },
 ];
 
 const graphNodes: CaseGraphNode[] = [
@@ -251,14 +252,6 @@ const graphLinks: CaseGraphLink[] = [
   },
 ];
 
-const kindStyles: Record<GraphNodeKind, { bg: string; icon: typeof UserRound }> =
-  {
-    suspect: { bg: "#000000", icon: UserRound },
-    evidence: { bg: "#FFFFFF", icon: FileSearch },
-    location: { bg: "#F4F4F0", icon: MapPin },
-    transaction: { bg: "#FCD34D", icon: ReceiptText },
-  };
-
 function getHopDistances(enabledKinds: Set<LinkKind>, subjectId: string | null) {
   if (!subjectId) {
     return new Map<string, number>();
@@ -300,9 +293,14 @@ function getHopDistances(enabledKinds: Set<LinkKind>, subjectId: string | null) 
   return distances;
 }
 
+/* ─── Node component ──────────────────────────── */
+
 function NetworkNode({ data, id }: NodeProps<Node<CaseGraphNodeData>>) {
-  const Icon = kindStyles[data.kind].icon;
+  const Icon = ({ suspect: UserRound, evidence: FileSearch, location: MapPin, transaction: ReceiptText } as const)[data.kind];
   const isSuspect = data.kind === "suspect";
+  const isTransaction = data.kind === "transaction";
+  const isEvidence = data.kind === "evidence";
+  const isLocation = data.kind === "location";
   const selectedSuspectId = useInvestigationStore(
     (state) => state.selectedSuspectId,
   );
@@ -310,14 +308,29 @@ function NetworkNode({ data, id }: NodeProps<Node<CaseGraphNodeData>>) {
     (state) => state.setSelectedSuspectId,
   );
 
+  // Build the node's class string based on kind + dark mode
+  // Light mode uses the original brutalist colors
+  // Dark mode uses the intel palette — NO YELLOW anywhere
+  let kindClasses = "";
+
+  if (data.selected) {
+    // Selected node: red highlight in both modes
+    kindClasses = "bg-[#D22B2B] text-white dark:bg-[#D22B2B] dark:text-[#EFF6E0] dark:border-[#D22B2B]";
+  } else if (isSuspect) {
+    // Suspect: black in light → teal panel in dark
+    kindClasses = "bg-black text-white dark:bg-[#124559] dark:border dark:border-[#598392] dark:text-[#EFF6E0] dark:shadow-none";
+  } else if (isTransaction) {
+    // Transaction: yellow in light → translucent steel in dark (KILL YELLOW)
+    kindClasses = "bg-[#FCD34D] text-black dark:bg-[#598392]/20 dark:border dark:border-[#AEC3B0] dark:text-[#EFF6E0] dark:shadow-none";
+  } else if (isEvidence || isLocation) {
+    // Evidence/Location: white/parchment in light → deep void in dark
+    kindClasses = `${isEvidence ? "bg-white" : "bg-[#F4F4F0]"} text-black dark:bg-[#01161E] dark:border dark:border-[#598392] dark:text-[#EFF6E0] dark:shadow-none`;
+  }
+
   return (
     <div
-      className={`group relative min-h-24 w-44 border-4 border-black p-3 font-mono uppercase shadow-[5px_5px_0_black] transition-all duration-300 rounded-none ${
-        data.selected
-          ? "scale-105 bg-[#D22B2B] text-white"
-          : isSuspect
-            ? "bg-black text-white"
-            : "text-black"
+      className={`group relative min-h-24 w-44 border-4 border-black p-3 font-mono uppercase shadow-[5px_5px_0_black] transition-all duration-300 rounded-none dark:border-[#598392] ${kindClasses} ${
+        data.selected ? "scale-105" : ""
       }`}
       onClick={() => {
         if (isSuspect) {
@@ -325,8 +338,6 @@ function NetworkNode({ data, id }: NodeProps<Node<CaseGraphNodeData>>) {
         }
       }}
       style={{
-        backgroundColor:
-          data.selected || isSuspect ? undefined : kindStyles[data.kind].bg,
         opacity: data.active ? 1 : 0.2,
         filter: data.active ? "none" : "grayscale(1)",
         cursor: isSuspect ? "pointer" : "default",
@@ -335,12 +346,12 @@ function NetworkNode({ data, id }: NodeProps<Node<CaseGraphNodeData>>) {
       <Handle
         type="target"
         position={Position.Left}
-        className="!h-3 !w-3 !border-2 !border-black !bg-[#F4F4F0]"
+        className="!h-3 !w-3 !border-2 !border-black !bg-[#F4F4F0] dark:!border-[#598392] dark:!bg-[#124559]"
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="!h-3 !w-3 !border-2 !border-black !bg-[#D22B2B]"
+        className="!h-3 !w-3 !border-2 !border-black !bg-[#D22B2B] dark:!border-[#AEC3B0] dark:!bg-[#AEC3B0]"
       />
       <div className="mb-2 flex items-center justify-between gap-2 border-b-2 border-current pb-2">
         <Icon aria-hidden="true" size={18} strokeWidth={3} />
@@ -351,13 +362,15 @@ function NetworkNode({ data, id }: NodeProps<Node<CaseGraphNodeData>>) {
         {data.subtitle}
       </div>
       {data.risk ? (
-        <div className="mt-2 inline-block border-2 border-black bg-[#FCD34D] px-1 py-0.5 text-[10px] font-black text-black">
+        <div className="mt-2 inline-block border-2 border-black bg-[#FCD34D] px-1 py-0.5 text-[10px] font-black text-black dark:border-[#AEC3B0] dark:bg-transparent dark:text-[#AEC3B0]">
           {data.risk} RISK
         </div>
       ) : null}
     </div>
   );
 }
+
+/* ─── Edge component ──────────────────────────── */
 
 function NetworkRedStringEdge({
   data,
@@ -366,6 +379,9 @@ function NetworkRedStringEdge({
   targetX,
   targetY,
 }: EdgeProps<Edge<CaseGraphEdgeData>>) {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
   const deltaX = targetX - sourceX;
   const deltaY = targetY - sourceY;
   const path = [
@@ -379,12 +395,16 @@ function NetworkRedStringEdge({
 
   const opacity = data?.active ? 0.95 : 0;
 
+  // Dark mode: structural steel for standard, phosphor sage for highlighted
+  const outerStroke = isDark ? "#124559" : "#000000";
+  const innerStroke = isDark ? "#598392" : "#D22B2B";
+
   return (
     <g className="transition-opacity duration-300" style={{ opacity }}>
       <path
         d={path}
         fill="none"
-        stroke="#000000"
+        stroke={outerStroke}
         strokeLinecap="square"
         strokeLinejoin="miter"
         strokeWidth={6}
@@ -392,7 +412,7 @@ function NetworkRedStringEdge({
       <path
         d={path}
         fill="none"
-        stroke="#D22B2B"
+        stroke={innerStroke}
         strokeDasharray="8,7"
         strokeLinecap="square"
         strokeLinejoin="miter"
@@ -417,6 +437,8 @@ const edgeTypes = {
   networkRedString: NetworkRedStringEdge,
 };
 
+/* ─── Canvas ──────────────────────────────────── */
+
 function NetworkGraphCanvas() {
   const selectedSuspectId = useInvestigationStore(
     (state) => state.selectedSuspectId,
@@ -426,6 +448,9 @@ function NetworkGraphCanvas() {
   );
   const openLedger = useInvestigationStore((state) => state.openLedger);
   const timeRange = useInvestigationStore((state) => state.timeRange);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
   const [enabledLinkKinds, setEnabledLinkKinds] = useState<Set<LinkKind>>(
     () => new Set(linkFilters.map((filter) => filter.id)),
   );
@@ -500,7 +525,7 @@ function NetworkGraphCanvas() {
           markerEnd: active
             ? {
                 type: MarkerType.ArrowClosed,
-                color: "#D22B2B",
+                color: isDark ? "#AEC3B0" : "#D22B2B",
                 width: 18,
                 height: 18,
               }
@@ -511,7 +536,7 @@ function NetworkGraphCanvas() {
           },
         };
       }),
-    [activeNodeIds, enabledLinkKinds],
+    [activeNodeIds, enabledLinkKinds, isDark],
   );
 
   const selectedNode = graphNodes.find((node) => node.id === selectedSuspectId);
@@ -532,9 +557,10 @@ function NetworkGraphCanvas() {
   }
 
   return (
-    <div className="grid h-full min-h-[640px] bg-[#F4F4F0] lg:grid-cols-[330px_1fr]">
-      <aside className="z-10 border-b-4 border-black bg-[#F4F4F0] font-mono text-xs font-black uppercase lg:border-b-0 lg:border-r-4">
-        <div className="border-b-4 border-black bg-black px-3 py-2 text-[#F4F4F0]">
+    <div className="grid h-full min-h-[640px] bg-[#F4F4F0] dark:bg-[#01161E] lg:grid-cols-[330px_1fr]">
+      {/* ── Sidebar ─────────────────────────────── */}
+      <aside className="z-10 border-b-4 border-black bg-[#F4F4F0] font-mono text-xs font-black uppercase dark:border-[#598392] dark:bg-[#124559] dark:text-[#EFF6E0] lg:border-b-0 lg:border-r-4">
+        <div className="border-b-4 border-black bg-black px-3 py-2 text-[#F4F4F0] dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0]">
           Link Filters
         </div>
         <div className="space-y-2 p-3">
@@ -547,17 +573,17 @@ function NetworkGraphCanvas() {
             return (
               <label
                 key={filter.id}
-                className="flex cursor-pointer items-center gap-2 border-2 border-black bg-white px-2 py-2 shadow-[3px_3px_0_black]"
+                className="flex cursor-pointer items-center gap-2 border-2 border-black bg-white px-2 py-2 shadow-[3px_3px_0_black] dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0] dark:shadow-none"
               >
                 <input
                   type="checkbox"
                   checked={checked}
                   onChange={() => toggleLinkKind(filter.id)}
-                  className="h-4 w-4 shrink-0 accent-black"
+                  className="h-4 w-4 shrink-0 accent-black dark:accent-[#AEC3B0]"
                 />
                 <span
-                  className="h-3 w-3 shrink-0 border-2 border-black"
-                  style={{ backgroundColor: filter.tone }}
+                  className="h-3 w-3 shrink-0 border-2 border-black dark:border-[#598392]"
+                  style={{ backgroundColor: isDark ? filter.darkTone : filter.tone }}
                 />
                 <span className="min-w-0">
                   {filter.label} ({count})
@@ -566,7 +592,7 @@ function NetworkGraphCanvas() {
             );
           })}
 
-          <label className="grid gap-2 border-2 border-black bg-white px-2 py-2 shadow-[3px_3px_0_black]">
+          <label className="grid gap-2 border-2 border-black bg-white px-2 py-2 shadow-[3px_3px_0_black] dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0] dark:shadow-none">
             <span>Hops From Subject: {hopLimit}</span>
             <input
               type="range"
@@ -580,13 +606,13 @@ function NetworkGraphCanvas() {
           </label>
 
           <div className="grid grid-cols-2 gap-2">
-            <div className="border-2 border-black bg-white px-2 py-2">
+            <div className="border-2 border-black bg-white px-2 py-2 dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0]">
               Edges: {visibleEdgeCount}
             </div>
             <button
               type="button"
               onClick={() => setSelectedSuspectId(null)}
-              className="border-2 border-black bg-[#FCD34D] px-2 py-2 text-left shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+              className="border-2 border-black bg-[#FCD34D] px-2 py-2 text-left text-black shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none dark:border-[#AEC3B0] dark:bg-[#124559] dark:text-[#AEC3B0] dark:shadow-none dark:hover:bg-[#AEC3B0] dark:hover:text-[#01161E]"
             >
               Clear Subject
             </button>
@@ -594,6 +620,7 @@ function NetworkGraphCanvas() {
         </div>
       </aside>
 
+      {/* ── Graph ───────────────────────────────── */}
       <div className="relative min-h-[520px]">
       <ReactFlow
         nodes={nodes}
@@ -607,19 +634,19 @@ function NetworkGraphCanvas() {
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable
-        className="bg-[#F4F4F0]"
+        className="bg-[#F4F4F0] dark:bg-[#01161E]"
       >
         <Background
           variant={BackgroundVariant.Dots}
-          color="#000000"
+          color={isDark ? "#598392" : "#000000"}
           gap={24}
           size={1.15}
         />
 
         {selectedNode ? (
           <Panel position="bottom-right" className="m-0">
-            <div className="max-w-[320px] border-4 border-black bg-white p-3 font-mono text-xs font-black uppercase shadow-[6px_6px_0_black]">
-              <div className="mb-2 flex items-center gap-2 border-b-2 border-black pb-2">
+            <div className="max-w-[320px] border-4 border-black bg-white p-3 font-mono text-xs font-black uppercase shadow-[6px_6px_0_black] dark:border-[#598392] dark:bg-[#124559] dark:text-[#EFF6E0] dark:shadow-[6px_6px_0_#01161E]">
+              <div className="mb-2 flex items-center gap-2 border-b-2 border-black pb-2 dark:border-[#598392]">
                 <Phone aria-hidden="true" size={17} strokeWidth={3} />
                 Subject Locked
               </div>
@@ -630,7 +657,7 @@ function NetworkGraphCanvas() {
               <button
                 type="button"
                 onClick={openLedger}
-                className="w-full border-4 border-black bg-[#D22B2B] px-3 py-2 text-left text-white shadow-[4px_4px_0_black] active:translate-x-1 active:translate-y-1 active:shadow-none"
+                className="w-full border-4 border-black bg-[#D22B2B] px-3 py-2 text-left text-white shadow-[4px_4px_0_black] active:translate-x-1 active:translate-y-1 active:shadow-none dark:border-[#598392] dark:shadow-[4px_4px_0_#01161E]"
               >
                 [ INSPECT DOSSIER ]
               </button>

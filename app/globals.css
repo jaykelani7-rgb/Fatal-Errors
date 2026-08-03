@@ -3,9 +3,31 @@
 @import "mapbox-gl/dist/mapbox-gl.css";
 @import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 
+/* next-themes sets class="dark" on <html>; make Tailwind v4 respond to it. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --paper: #f4f4f0;
   --ink: #000000;
+  --panel: #ffffff;
+  --line: #000000;
+  --accent: #FCD34D;
+  --dim: #6b7280;
+  --danger: #D22B2B;
+
+  color-scheme: light;
+}
+
+.dark {
+  --paper: #01161e;
+  --ink: #eff6e0;
+  --panel: #124559;
+  --line: #598392;
+  --accent: #aec3b0;
+  --dim: #598392;
+  --danger: #D22B2B;
+
+  color-scheme: dark;
 }
 
 * {
@@ -38,19 +60,21 @@ textarea {
   font: inherit;
 }
 
+/* ── React Flow ──────────────────────────────── */
+
 .react-flow__node {
   border-radius: 0;
 }
 
 .react-flow__controls {
-  background: #ffffff;
+  background: var(--panel);
   border: 4px solid var(--ink);
   border-radius: 0;
   box-shadow: 4px 4px 0 var(--ink);
 }
 
 .react-flow__controls-button {
-  background: #ffffff;
+  background: var(--panel);
   border-bottom: 2px solid var(--ink);
   border-radius: 0;
   color: var(--ink);
@@ -72,12 +96,19 @@ textarea {
   color: var(--ink);
 }
 
+/* ── Mapbox base ─────────────────────────────── */
+
 .fatal-map {
   background: var(--paper);
 }
 
 .fatal-map .mapboxgl-canvas {
   outline: none;
+}
+
+/* Dark mode: tint the map canvas toward #01161E */
+.dark .fatal-map .mapboxgl-canvas {
+  filter: brightness(0.6) saturate(0.3) hue-rotate(180deg);
 }
 
 .fatal-map .mapboxgl-ctrl-group {
@@ -89,7 +120,7 @@ textarea {
 }
 
 .fatal-map .mapboxgl-ctrl-group button {
-  background-color: #ffffff;
+  background-color: var(--panel);
   border-bottom: 2px solid var(--ink);
   border-radius: 0;
   height: 34px;
@@ -108,6 +139,12 @@ textarea {
 .fatal-map .mapboxgl-ctrl button.mapboxgl-ctrl-zoom-out .mapboxgl-ctrl-icon,
 .fatal-map .mapbox-gl-draw_ctrl-draw-btn {
   filter: contrast(1.4);
+}
+
+.dark .fatal-map .mapboxgl-ctrl button.mapboxgl-ctrl-zoom-in .mapboxgl-ctrl-icon,
+.dark .fatal-map .mapboxgl-ctrl button.mapboxgl-ctrl-zoom-out .mapboxgl-ctrl-icon,
+.dark .fatal-map .mapbox-gl-draw_ctrl-draw-btn {
+  filter: contrast(1.4) invert(1);
 }
 
 .fatal-map .mapboxgl-ctrl-attrib {
@@ -149,19 +186,21 @@ textarea {
   border-top-color: var(--ink);
 }
 
+/* ── Time slider ─────────────────────────────── */
+
 .fatal-time-slider {
-  accent-color: #d22b2b;
+  accent-color: var(--danger);
 }
 
 .fatal-time-slider::-webkit-slider-runnable-track {
-  background: #ffffff;
+  background: var(--panel);
   border: 3px solid var(--ink);
   height: 14px;
 }
 
 .fatal-time-slider::-webkit-slider-thumb {
   appearance: none;
-  background: #d22b2b;
+  background: var(--danger);
   border: 3px solid var(--ink);
   border-radius: 0;
   height: 26px;
@@ -170,13 +209,13 @@ textarea {
 }
 
 .fatal-time-slider::-moz-range-track {
-  background: #ffffff;
+  background: var(--panel);
   border: 3px solid var(--ink);
   height: 14px;
 }
 
 .fatal-time-slider::-moz-range-thumb {
-  background: #d22b2b;
+  background: var(--danger);
   border: 3px solid var(--ink);
   border-radius: 0;
   height: 20px;
@@ -200,7 +239,7 @@ textarea {
 }
 
 .fatal-timeline-scroll::-webkit-scrollbar-thumb:hover {
-  background: #d22b2b;
+  background: var(--danger);
 }
 
 /* ── Scan-line animation ─────────────────────── */
@@ -214,4 +253,3 @@ textarea {
 .fatal-scanline {
   animation: fatal-scanline 2s ease-in-out infinite;
 }
-
