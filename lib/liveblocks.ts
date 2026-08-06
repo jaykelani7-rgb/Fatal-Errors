@@ -1,6 +1,10 @@
-import { createClient } from "@liveblocks/client";
+import { createClient, type LiveList } from "@liveblocks/client";
 import { createRoomContext } from "@liveblocks/react";
 import type { ForceMapPanEvent } from "@/liveblocks.config";
+import type {
+  StoredFlowEdge,
+  StoredFlowNode,
+} from "@/lib/evidence-board-types";
 
 export const LIVEBLOCKS_ROOM_ID =
   process.env.NEXT_PUBLIC_LIVEBLOCKS_ROOM_ID ?? "case-tb-001041";
@@ -27,6 +31,11 @@ type CollaborationUserMeta = {
   };
 };
 
+type CollaborationStorage = {
+  nodes: LiveList<StoredFlowNode>;
+  edges: LiveList<StoredFlowEdge>;
+};
+
 const publicApiKey = process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY;
 
 export const isLiveblocksConfigured = Boolean(publicApiKey);
@@ -37,15 +46,21 @@ export const liveblocksClient = createClient({
   publicApiKey: publicApiKey ?? "pk_dev_missing",
 });
 
+const roomContext = createRoomContext<
+  CollaborationPresence,
+  CollaborationStorage,
+  CollaborationUserMeta,
+  ForceMapPanEvent
+>(liveblocksClient);
+
 export const {
   RoomProvider,
   useBroadcastEvent,
   useEventListener,
+  useMutation,
   useOthers,
+  useStatus,
   useUpdateMyPresence,
-} = createRoomContext<
-  CollaborationPresence,
-  Record<string, never>,
-  CollaborationUserMeta,
-  ForceMapPanEvent
->(liveblocksClient);
+} = roomContext;
+
+export const useStorage = roomContext.suspense.useStorage;

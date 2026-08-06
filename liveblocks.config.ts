@@ -1,3 +1,9 @@
+import type { LiveList } from "@liveblocks/client";
+import type {
+  StoredFlowEdge,
+  StoredFlowNode,
+} from "@/lib/evidence-board-types";
+
 export type ForceMapPanEvent = {
   type: "FORCE_MAP_PAN";
   coordinates: [number, number];
@@ -11,7 +17,10 @@ declare global {
       y: number | null;
       agentId: string;
     };
-    Storage: Record<string, never>;
+    Storage: {
+      nodes: LiveList<StoredFlowNode>;
+      edges: LiveList<StoredFlowEdge>;
+    };
     UserMeta: {
       id: string;
       info: {

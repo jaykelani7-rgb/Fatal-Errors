@@ -2,6 +2,7 @@
 
 import type { ChangeEvent } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { useMutation } from "@/lib/liveblocks";
 import { useInvestigationStore } from "@/store/use-investigation-store";
 
 function NodeLockTag({ lockedBy }: { lockedBy: unknown }) {
@@ -14,18 +15,19 @@ function NodeLockTag({ lockedBy }: { lockedBy: unknown }) {
   );
 }
 
-export function StickyNoteNode({ id, data }: NodeProps) {
-  const updateNodeData = useInvestigationStore((state) => state.updateNodeData);
+function StickyNoteCard({
+  data,
+  onChange,
+}: {
+  data: NodeProps["data"];
+  onChange: (event: ChangeEvent<HTMLTextAreaElement>) => void;
+}) {
   const text =
     typeof data.text === "string"
       ? data.text
       : typeof data.label === "string"
         ? data.label
         : "";
-
-  function handleChange(event: ChangeEvent<HTMLTextAreaElement>) {
-    updateNodeData(id, { text: event.target.value });
-  }
 
   return (
     <div className="relative h-48 w-48 border-2 border-[var(--ink)] bg-[var(--accent)] p-4 pt-6 shadow-[4px_4px_0_var(--ink)] rounded-none">
@@ -38,7 +40,7 @@ export function StickyNoteNode({ id, data }: NodeProps) {
       <div className="absolute left-1/2 top-[-10px] h-5 w-16 -translate-x-1/2 border-2 border-[var(--ink)] bg-[var(--panel)] shadow-[2px_2px_0_var(--ink)] rounded-none" />
       <textarea
         value={text}
-        onChange={handleChange}
+        onChange={onChange}
         className="nodrag nopan h-full w-full resize-none border-0 bg-transparent font-mono text-sm leading-tight text-[var(--ink)] outline-none placeholder:text-[var(--ink)]/50 rounded-none"
         placeholder="TYPE FACT..."
         aria-label="Sticky note text"
@@ -49,6 +51,46 @@ export function StickyNoteNode({ id, data }: NodeProps) {
         type="source"
       />
     </div>
+  );
+}
+
+export function StickyNoteNode({ id, data }: NodeProps) {
+  const updateNodeData = useInvestigationStore((state) => state.updateNodeData);
+
+  return (
+    <StickyNoteCard
+      data={data}
+      onChange={(event) => updateNodeData(id, { text: event.target.value })}
+    />
+  );
+}
+
+export function LiveStickyNoteNode({ id, data }: NodeProps) {
+  const updateNodeData = useMutation(
+    ({ storage }, nodeId: string, text: string) => {
+      const liveNodes = storage.get("nodes");
+      const nodeIndex = liveNodes.findIndex((node) => node.id === nodeId);
+      if (nodeIndex === -1) return;
+
+      const node = liveNodes.get(nodeIndex);
+      if (!node) return;
+
+      liveNodes.set(nodeIndex, {
+        ...node,
+        data: {
+          ...node.data,
+          text,
+        },
+      });
+    },
+    [],
+  );
+
+  return (
+    <StickyNoteCard
+      data={data}
+      onChange={(event) => updateNodeData(id, event.target.value)}
+    />
   );
 }
 

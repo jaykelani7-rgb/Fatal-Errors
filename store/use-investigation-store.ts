@@ -8,8 +8,12 @@ import {
   type XYPosition,
 } from "@xyflow/react";
 import { create } from "zustand";
-import { liveblocks, type WithLiveblocks } from "@liveblocks/zustand";
-import { liveblocksClient } from "@/lib/liveblocks";
+import {
+  deserializeFlowEdges,
+  deserializeFlowNodes,
+  INITIAL_EVIDENCE_EDGES,
+  INITIAL_EVIDENCE_NODES,
+} from "@/lib/evidence-board-storage";
 
 export type EvidenceNodeType = "stickyNote" | "polaroid";
 export type ActiveWorkspace = "canvas" | "map" | "network" | "timeline";
@@ -298,281 +302,242 @@ type InvestigationState = {
   clearAllFilters: () => void;
 };
 
-export const useInvestigationStore = create<
-  WithLiveblocks<InvestigationState>
->()(
-  liveblocks(
-    (set, get) => ({
-      isCommandPaletteOpen: false,
-      isQrModalOpen: false,
-      activeWorkspace: "map",
-      timeRange: ["2026-07-18", "2026-07-28"],
-      playbackDate: "2026-07-28",
-      isMapPlaying: false,
-      selectedSuspectId: null,
-      selectedCrimeTypes: ["Burglary", "Assault", "Fraud", "Robbery", "Arson"],
-      spatialBounds: null,
-      incidentData: INCIDENT_DATA,
-      movementData: MOVEMENT_DATA,
-      mapPanRequest: null,
-      nodes: [
-        {
-          id: "note-victim",
-          type: "stickyNote",
-          position: { x: 120, y: 120 },
-          data: {
-            text: "Victim last seen at Platform 9. Station clock reads 21:14.",
-          },
-        },
-        {
-          id: "photo-ticket",
-          type: "polaroid",
-          position: { x: 480, y: 70 },
-          data: {
-            caption: "TORN TICKET",
-          },
-        },
-        {
-          id: "note-witness",
-          type: "stickyNote",
-          position: { x: 420, y: 280 },
-          data: {
-            text: "Night clerk reports a second visitor after closing.",
-          },
-        },
-      ],
-      edges: [],
-      toggleCommandPalette: () =>
-        set((state) => ({
-          isCommandPaletteOpen: !state.isCommandPaletteOpen,
-        })),
-      closeCommandPalette: () => set({ isCommandPaletteOpen: false }),
-      setQrModalOpen: (isOpen) => set({ isQrModalOpen: isOpen }),
-      setActiveWorkspace: (workspace) => {
-        set({ activeWorkspace: workspace });
-      },
-      setTimeRange: (timeRange) => {
-        set({ timeRange });
-      },
-      setPlaybackDate: (date) => {
-        set({ playbackDate: date });
-      },
-      setIsMapPlaying: (isPlaying) => {
-        set({ isMapPlaying: isPlaying });
-      },
-      setSelectedSuspectId: (suspectId) => {
-        set({ selectedSuspectId: suspectId });
-      },
-      toggleSelectedCrimeType: (crimeType) => {
-        const selectedCrimeTypes = get().selectedCrimeTypes;
-        const nextTypes = selectedCrimeTypes.includes(crimeType)
-          ? selectedCrimeTypes.filter((type) => type !== crimeType)
-          : [...selectedCrimeTypes, crimeType];
-
-        set({
-          selectedCrimeTypes: nextTypes,
-        });
-      },
-      setSelectedCrimeTypeEnabled: (crimeType, isEnabled) => {
-        const selectedCrimeTypes = get().selectedCrimeTypes;
-
-        if (isEnabled) {
-          set({
-            selectedCrimeTypes: selectedCrimeTypes.includes(crimeType)
-              ? selectedCrimeTypes
-              : [...selectedCrimeTypes, crimeType],
-          });
-          return;
-        }
-
-        set({
-          selectedCrimeTypes: selectedCrimeTypes.filter(
-            (type) => type !== crimeType,
-          ),
-        });
-      },
-      setSpatialBounds: (bounds) => {
-        set({ spatialBounds: bounds });
-      },
-      requestMapPan: (coordinates, targetId) => {
-        set({
-          mapPanRequest: {
-            coordinates,
-            targetId,
-            sequence: (get().mapPanRequest?.sequence ?? 0) + 1,
-          },
-        });
-      },
-      onNodesChange: (changes) => {
-        set({ nodes: applyNodeChanges(changes, get().nodes) });
-      },
-      onEdgesChange: (changes) => {
-        set({ edges: applyEdgeChanges(changes, get().edges) });
-      },
-      addNode: (intelText) => {
-        if (!intelText.trim()) return;
-
-        const timestamp = Date.now();
-
-        set({
-          nodes: [
-            ...get().nodes,
-            {
-              id: `note-${timestamp}-${crypto.randomUUID()}`,
-              type: "stickyNote",
-              position: { x: 250, y: 250 },
-              data: {
-                label: intelText,
-                timestamp,
-              },
-            },
-          ],
-        });
-      },
-      addEvidenceNode: (nodeType, position) => {
-        const id = `${nodeType}-${crypto.randomUUID()}`;
-        const data =
-          nodeType === "stickyNote"
-            ? { text: "" }
-            : { caption: "SUSPECT POLAROID" };
-
-        set({
-          nodes: [
-            ...get().nodes,
-            {
-              id,
-              type: nodeType,
-              position,
-              data,
-            },
-          ],
-        });
-      },
-      pinFactToBoard: (text) => {
-        const randomOffset = () => Math.round(Math.random() * 180 - 90);
-        const centerX =
-          typeof window === "undefined"
-            ? 420
-            : Math.round(window.innerWidth / 2);
-        const centerY =
-          typeof window === "undefined"
-            ? 280
-            : Math.round(window.innerHeight / 2);
-
-        set({
-          nodes: [
-            ...get().nodes,
-            {
-              id: `stickyNote-${crypto.randomUUID()}`,
-              type: "stickyNote",
-              position: {
-                x: centerX + randomOffset(),
-                y: centerY + randomOffset(),
-              },
-              data: {
-                text,
-              },
-            },
-          ],
-        });
-      },
-      updateNodeData: (nodeId, data) => {
-        set({
-          nodes: get().nodes.map((node) =>
-            node.id === nodeId
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    ...data,
-                  },
-                }
-              : node,
-          ),
-        });
-      },
-      lockNode: (nodeId, agentId) => {
-        set({
-          nodes: get().nodes.map((node) =>
-            node.id === nodeId
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    lockedBy: agentId,
-                  },
-                }
-              : node,
-          ),
-        });
-      },
-      unlockNode: (nodeId, agentId) => {
-        set({
-          nodes: get().nodes.map((node) =>
-            node.id === nodeId && node.data.lockedBy === agentId
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    lockedBy: null,
-                  },
-                }
-              : node,
-          ),
-        });
-      },
-      facts: [
-        {
-          id: "fact-001",
-          type: "forensic",
-          text: "The victim entered the station at 21:14 and never appeared on the northbound camera.",
-          status: "verified",
-        },
-        {
-          id: "fact-002",
-          type: "forensic",
-          text: "A torn ticket stub was recovered from the inner coat pocket.",
-          status: "pending",
-        },
-        {
-          id: "fact-003",
-          type: "testimonial",
-          text: "The night clerk claims a second visitor arrived fifteen minutes after closing.",
-          status: "disputed",
-        },
-        {
-          id: "fact-004",
-          type: "testimonial",
-          text: "The ledger clock differs from station time by seven minutes.",
-          status: "pending",
-        },
-      ],
-      isLedgerOpen: true,
-      toggleLedger: () =>
-        set((state) => ({ isLedgerOpen: !state.isLedgerOpen })),
-      openLedger: () => set({ isLedgerOpen: true }),
-      clearAllFilters: () =>
-        set({
-          timeRange: ["2026-07-18", "2026-07-28"],
-          playbackDate: "2026-07-28",
-          selectedSuspectId: null,
-          selectedCrimeTypes: [
-            "Burglary",
-            "Assault",
-            "Fraud",
-            "Robbery",
-            "Arson",
-          ],
-          spatialBounds: null,
-          isMapPlaying: false,
-        }),
-    }),
-    {
-      client: liveblocksClient,
-      storageMapping: {
-        nodes: true,
-        edges: true,
-      },
+export const useInvestigationStore = create<InvestigationState>()(
+  (set, get) => ({
+    isCommandPaletteOpen: false,
+    isQrModalOpen: false,
+    activeWorkspace: "map",
+    timeRange: ["2026-07-18", "2026-07-28"],
+    playbackDate: "2026-07-28",
+    isMapPlaying: false,
+    selectedSuspectId: null,
+    selectedCrimeTypes: ["Burglary", "Assault", "Fraud", "Robbery", "Arson"],
+    spatialBounds: null,
+    incidentData: INCIDENT_DATA,
+    movementData: MOVEMENT_DATA,
+    mapPanRequest: null,
+    nodes: deserializeFlowNodes(INITIAL_EVIDENCE_NODES),
+    edges: deserializeFlowEdges(INITIAL_EVIDENCE_EDGES),
+    toggleCommandPalette: () =>
+      set((state) => ({
+        isCommandPaletteOpen: !state.isCommandPaletteOpen,
+      })),
+    closeCommandPalette: () => set({ isCommandPaletteOpen: false }),
+    setQrModalOpen: (isOpen) => set({ isQrModalOpen: isOpen }),
+    setActiveWorkspace: (workspace) => {
+      set({ activeWorkspace: workspace });
     },
-  ),
+    setTimeRange: (timeRange) => {
+      set({ timeRange });
+    },
+    setPlaybackDate: (date) => {
+      set({ playbackDate: date });
+    },
+    setIsMapPlaying: (isPlaying) => {
+      set({ isMapPlaying: isPlaying });
+    },
+    setSelectedSuspectId: (suspectId) => {
+      set({ selectedSuspectId: suspectId });
+    },
+    toggleSelectedCrimeType: (crimeType) => {
+      const selectedCrimeTypes = get().selectedCrimeTypes;
+      const nextTypes = selectedCrimeTypes.includes(crimeType)
+        ? selectedCrimeTypes.filter((type) => type !== crimeType)
+        : [...selectedCrimeTypes, crimeType];
+
+      set({
+        selectedCrimeTypes: nextTypes,
+      });
+    },
+    setSelectedCrimeTypeEnabled: (crimeType, isEnabled) => {
+      const selectedCrimeTypes = get().selectedCrimeTypes;
+
+      if (isEnabled) {
+        set({
+          selectedCrimeTypes: selectedCrimeTypes.includes(crimeType)
+            ? selectedCrimeTypes
+            : [...selectedCrimeTypes, crimeType],
+        });
+        return;
+      }
+
+      set({
+        selectedCrimeTypes: selectedCrimeTypes.filter(
+          (type) => type !== crimeType,
+        ),
+      });
+    },
+    setSpatialBounds: (bounds) => {
+      set({ spatialBounds: bounds });
+    },
+    requestMapPan: (coordinates, targetId) => {
+      set({
+        mapPanRequest: {
+          coordinates,
+          targetId,
+          sequence: (get().mapPanRequest?.sequence ?? 0) + 1,
+        },
+      });
+    },
+    onNodesChange: (changes) => {
+      set({ nodes: applyNodeChanges(changes, get().nodes) });
+    },
+    onEdgesChange: (changes) => {
+      set({ edges: applyEdgeChanges(changes, get().edges) });
+    },
+    addNode: (intelText) => {
+      if (!intelText.trim()) return;
+
+      const timestamp = Date.now();
+
+      set({
+        nodes: [
+          ...get().nodes,
+          {
+            id: `note-${timestamp}-${crypto.randomUUID()}`,
+            type: "stickyNote",
+            position: { x: 250, y: 250 },
+            data: {
+              label: intelText,
+              timestamp,
+            },
+          },
+        ],
+      });
+    },
+    addEvidenceNode: (nodeType, position) => {
+      const id = `${nodeType}-${crypto.randomUUID()}`;
+      const data =
+        nodeType === "stickyNote"
+          ? { text: "" }
+          : { caption: "SUSPECT POLAROID" };
+
+      set({
+        nodes: [
+          ...get().nodes,
+          {
+            id,
+            type: nodeType,
+            position,
+            data,
+          },
+        ],
+      });
+    },
+    pinFactToBoard: (text) => {
+      const randomOffset = () => Math.round(Math.random() * 180 - 90);
+      const centerX =
+        typeof window === "undefined" ? 420 : Math.round(window.innerWidth / 2);
+      const centerY =
+        typeof window === "undefined"
+          ? 280
+          : Math.round(window.innerHeight / 2);
+
+      set({
+        nodes: [
+          ...get().nodes,
+          {
+            id: `stickyNote-${crypto.randomUUID()}`,
+            type: "stickyNote",
+            position: {
+              x: centerX + randomOffset(),
+              y: centerY + randomOffset(),
+            },
+            data: {
+              text,
+            },
+          },
+        ],
+      });
+    },
+    updateNodeData: (nodeId, data) => {
+      set({
+        nodes: get().nodes.map((node) =>
+          node.id === nodeId
+            ? {
+                ...node,
+                data: {
+                  ...node.data,
+                  ...data,
+                },
+              }
+            : node,
+        ),
+      });
+    },
+    lockNode: (nodeId, agentId) => {
+      set({
+        nodes: get().nodes.map((node) =>
+          node.id === nodeId
+            ? {
+                ...node,
+                data: {
+                  ...node.data,
+                  lockedBy: agentId,
+                },
+              }
+            : node,
+        ),
+      });
+    },
+    unlockNode: (nodeId, agentId) => {
+      set({
+        nodes: get().nodes.map((node) =>
+          node.id === nodeId && node.data.lockedBy === agentId
+            ? {
+                ...node,
+                data: {
+                  ...node.data,
+                  lockedBy: null,
+                },
+              }
+            : node,
+        ),
+      });
+    },
+    facts: [
+      {
+        id: "fact-001",
+        type: "forensic",
+        text: "The victim entered the station at 21:14 and never appeared on the northbound camera.",
+        status: "verified",
+      },
+      {
+        id: "fact-002",
+        type: "forensic",
+        text: "A torn ticket stub was recovered from the inner coat pocket.",
+        status: "pending",
+      },
+      {
+        id: "fact-003",
+        type: "testimonial",
+        text: "The night clerk claims a second visitor arrived fifteen minutes after closing.",
+        status: "disputed",
+      },
+      {
+        id: "fact-004",
+        type: "testimonial",
+        text: "The ledger clock differs from station time by seven minutes.",
+        status: "pending",
+      },
+    ],
+    isLedgerOpen: true,
+    toggleLedger: () => set((state) => ({ isLedgerOpen: !state.isLedgerOpen })),
+    openLedger: () => set({ isLedgerOpen: true }),
+    clearAllFilters: () =>
+      set({
+        timeRange: ["2026-07-18", "2026-07-28"],
+        playbackDate: "2026-07-28",
+        selectedSuspectId: null,
+        selectedCrimeTypes: [
+          "Burglary",
+          "Assault",
+          "Fraud",
+          "Robbery",
+          "Arson",
+        ],
+        spatialBounds: null,
+        isMapPlaying: false,
+      }),
+  }),
 );

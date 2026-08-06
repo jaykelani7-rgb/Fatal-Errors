@@ -1,6 +1,10 @@
 "use client";
 
+import type { Node } from "@xyflow/react";
 import { useState } from "react";
+import { useCollaborationIdentity } from "@/components/collaboration-context";
+import { serializeFlowNode } from "@/lib/evidence-board-storage";
+import { useMutation } from "@/lib/liveblocks";
 import {
   type InvestigationFact,
   useInvestigationStore,
@@ -18,10 +22,13 @@ function matchesFilter(fact: InvestigationFact, filter: FactFilter) {
   return filter === "all" || fact.type === filter;
 }
 
-export function FactLedger() {
+function FactLedgerView({
+  pinFactToBoard,
+}: {
+  pinFactToBoard: (text: string) => void;
+}) {
   const [activeFilter, setActiveFilter] = useState<FactFilter>("all");
   const facts = useInvestigationStore((state) => state.facts);
-  const pinFactToBoard = useInvestigationStore((state) => state.pinFactToBoard);
   const filteredFacts = facts.filter((fact) =>
     matchesFilter(fact, activeFilter),
   );
@@ -104,4 +111,33 @@ export function FactLedger() {
       </table>
     </div>
   );
+}
+
+function LiveFactLedger() {
+  const pinFactToBoard = useMutation(({ storage }, text: string) => {
+    const randomOffset = () => Math.round(Math.random() * 180 - 90);
+    const node: Node = {
+      id: `stickyNote-${crypto.randomUUID()}`,
+      type: "stickyNote",
+      position: {
+        x: Math.round(window.innerWidth / 2) + randomOffset(),
+        y: Math.round(window.innerHeight / 2) + randomOffset(),
+      },
+      data: { text },
+    };
+
+    storage.get("nodes").push(serializeFlowNode(node));
+  }, []);
+
+  return <FactLedgerView pinFactToBoard={pinFactToBoard} />;
+}
+
+function LocalFactLedger() {
+  const pinFactToBoard = useInvestigationStore((state) => state.pinFactToBoard);
+  return <FactLedgerView pinFactToBoard={pinFactToBoard} />;
+}
+
+export function FactLedger() {
+  const { isMultiplayer } = useCollaborationIdentity();
+  return isMultiplayer ? <LiveFactLedger /> : <LocalFactLedger />;
 }

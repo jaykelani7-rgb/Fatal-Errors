@@ -1,19 +1,37 @@
 "use client";
 
+import { ClientSideSuspense } from "@liveblocks/react";
 import { type DragEvent, useEffect, useMemo, useState } from "react";
 import {
+  applyEdgeChanges,
+  applyNodeChanges,
   Background,
   BackgroundVariant,
   Controls,
+  type Edge,
+  type EdgeChange,
+  type Node,
+  type NodeChange,
   ReactFlow,
   ReactFlowProvider,
-  type Node,
   useReactFlow,
+  type XYPosition,
 } from "@xyflow/react";
 import { useCollaborationIdentity } from "@/components/collaboration-context";
 import { RedStringEdge } from "@/components/flow-edges";
-import { PolaroidNode, StickyNoteNode } from "@/components/flow-nodes";
+import {
+  LiveStickyNoteNode,
+  PolaroidNode,
+  StickyNoteNode,
+} from "@/components/flow-nodes";
+import {
+  deserializeFlowEdges,
+  deserializeFlowNodes,
+  serializeFlowEdge,
+  serializeFlowNode,
+} from "@/lib/evidence-board-storage";
 import { triggerHaptic } from "@/lib/haptics";
+import { useMutation, useStorage } from "@/lib/liveblocks";
 import {
   type EvidenceNodeType,
   useInvestigationStore,
@@ -21,8 +39,13 @@ import {
 
 const dragTransferType = "application/reactflow";
 
-const nodeTypes = {
+const localNodeTypes = {
   stickyNote: StickyNoteNode,
+  polaroid: PolaroidNode,
+};
+
+const liveNodeTypes = {
+  stickyNote: LiveStickyNoteNode,
   polaroid: PolaroidNode,
 };
 
@@ -97,16 +120,25 @@ function EvidenceBox() {
   );
 }
 
-function BoardCanvas() {
-  const nodes = useInvestigationStore((state) => state.nodes);
-  const edges = useInvestigationStore((state) => state.edges);
-  const onNodesChange = useInvestigationStore((state) => state.onNodesChange);
-  const onEdgesChange = useInvestigationStore((state) => state.onEdgesChange);
-  const lockNode = useInvestigationStore((state) => state.lockNode);
-  const unlockNode = useInvestigationStore((state) => state.unlockNode);
-  const addEvidenceNode = useInvestigationStore(
-    (state) => state.addEvidenceNode,
-  );
+type BoardSurfaceProps = {
+  nodes: Node[];
+  edges: Edge[];
+  onNodesChange: (changes: NodeChange[]) => void;
+  onEdgesChange: (changes: EdgeChange[]) => void;
+  addEvidenceNode: (nodeType: EvidenceNodeType, position: XYPosition) => void;
+  setNodeLock: (nodeId: string, lockedBy: string | null) => void;
+  isLive: boolean;
+};
+
+function BoardSurface({
+  nodes,
+  edges,
+  onNodesChange,
+  onEdgesChange,
+  addEvidenceNode,
+  setNodeLock,
+  isLive,
+}: BoardSurfaceProps) {
   const { screenToFlowPosition } = useReactFlow();
   const { agentId } = useCollaborationIdentity();
 
@@ -133,17 +165,12 @@ function BoardCanvas() {
     event.preventDefault();
 
     const nodeType = event.dataTransfer.getData(dragTransferType);
+    if (nodeType !== "stickyNote" && nodeType !== "polaroid") return;
 
-    if (nodeType !== "stickyNote" && nodeType !== "polaroid") {
-      return;
-    }
-
-    const position = screenToFlowPosition({
-      x: event.clientX,
-      y: event.clientY,
-    });
-
-    addEvidenceNode(nodeType, position);
+    addEvidenceNode(
+      nodeType,
+      screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+    );
   }
 
   function handleNodeDragStart(_event: unknown, node: Node) {
@@ -151,12 +178,12 @@ function BoardCanvas() {
       typeof node.data.lockedBy === "string" ? node.data.lockedBy : null;
 
     if (lockedBy === null || lockedBy === agentId) {
-      lockNode(node.id, agentId);
+      setNodeLock(node.id, agentId);
     }
   }
 
   function handleNodeDragStop(_event: unknown, node: Node) {
-    unlockNode(node.id, agentId);
+    setNodeLock(node.id, null);
   }
 
   return (
@@ -165,7 +192,7 @@ function BoardCanvas() {
       <ReactFlow
         nodes={renderedNodes}
         edges={edges}
-        nodeTypes={nodeTypes}
+        nodeTypes={isLive ? liveNodeTypes : localNodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
@@ -188,10 +215,127 @@ function BoardCanvas() {
   );
 }
 
+function LiveBoardCanvas() {
+  const storedNodes = useStorage((root) => root.nodes);
+  const storedEdges = useStorage((root) => root.edges);
+  const nodes = useMemo(() => deserializeFlowNodes(storedNodes), [storedNodes]);
+  const edges = useMemo(() => deserializeFlowEdges(storedEdges), [storedEdges]);
+
+  const onNodesChange = useMutation(({ storage }, changes: NodeChange[]) => {
+    const liveNodes = storage.get("nodes");
+    const currentNodes = deserializeFlowNodes(liveNodes.toJSON());
+    const nextNodes = applyNodeChanges(changes, currentNodes);
+
+    liveNodes.clear();
+    nextNodes.forEach((node) => liveNodes.push(serializeFlowNode(node)));
+  }, []);
+
+  const onEdgesChange = useMutation(({ storage }, changes: EdgeChange[]) => {
+    const liveEdges = storage.get("edges");
+    const currentEdges = deserializeFlowEdges(liveEdges.toJSON());
+    const nextEdges = applyEdgeChanges(changes, currentEdges);
+
+    liveEdges.clear();
+    nextEdges.forEach((edge) => liveEdges.push(serializeFlowEdge(edge)));
+  }, []);
+
+  const addEvidenceNode = useMutation(
+    ({ storage }, nodeType: EvidenceNodeType, position: XYPosition) => {
+      const node: Node = {
+        id: `${nodeType}-${crypto.randomUUID()}`,
+        type: nodeType,
+        position,
+        data:
+          nodeType === "stickyNote"
+            ? { text: "" }
+            : { caption: "SUSPECT POLAROID" },
+      };
+
+      storage.get("nodes").push(serializeFlowNode(node));
+    },
+    [],
+  );
+
+  const setNodeLock = useMutation(
+    ({ storage }, nodeId: string, lockedBy: string | null) => {
+      const liveNodes = storage.get("nodes");
+      const nodeIndex = liveNodes.findIndex((node) => node.id === nodeId);
+      if (nodeIndex === -1) return;
+
+      const node = liveNodes.get(nodeIndex);
+      if (!node) return;
+
+      liveNodes.set(nodeIndex, {
+        ...node,
+        data: {
+          ...node.data,
+          lockedBy,
+        },
+      });
+    },
+    [],
+  );
+
+  return (
+    <BoardSurface
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      addEvidenceNode={addEvidenceNode}
+      setNodeLock={setNodeLock}
+      isLive
+    />
+  );
+}
+
+function LocalBoardCanvas() {
+  const nodes = useInvestigationStore((state) => state.nodes);
+  const edges = useInvestigationStore((state) => state.edges);
+  const onNodesChange = useInvestigationStore((state) => state.onNodesChange);
+  const onEdgesChange = useInvestigationStore((state) => state.onEdgesChange);
+  const addEvidenceNode = useInvestigationStore(
+    (state) => state.addEvidenceNode,
+  );
+  const lockNode = useInvestigationStore((state) => state.lockNode);
+  const unlockNode = useInvestigationStore((state) => state.unlockNode);
+
+  return (
+    <BoardSurface
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      addEvidenceNode={addEvidenceNode}
+      setNodeLock={(nodeId, lockedBy) => {
+        if (lockedBy) lockNode(nodeId, lockedBy);
+        else unlockNode(nodeId, "AGENT-01");
+      }}
+      isLive={false}
+    />
+  );
+}
+
+function BoardStorageFallback() {
+  return (
+    <div className="grid h-full w-full place-items-center bg-[var(--paper)] p-6 font-mono text-sm font-black uppercase tracking-[0.14em] text-[var(--dim)]">
+      [ DECRYPTING LEDGER... ]
+    </div>
+  );
+}
+
 export function Board() {
+  const { isMultiplayer } = useCollaborationIdentity();
+
   return (
     <ReactFlowProvider>
-      <BoardCanvas />
+      {isMultiplayer ? (
+        <ClientSideSuspense fallback={<BoardStorageFallback />}>
+          <LiveBoardCanvas />
+        </ClientSideSuspense>
+      ) : (
+        <LocalBoardCanvas />
+      )}
     </ReactFlowProvider>
   );
 }

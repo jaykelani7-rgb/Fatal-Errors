@@ -15,7 +15,6 @@
     "@deck.gl/react": "^9.3.7",
     "@liveblocks/client": "^3.23.1",
     "@liveblocks/react": "^3.23.1",
-    "@liveblocks/zustand": "^3.23.1",
     "@mapbox/mapbox-gl-draw": "^1.5.1",
     "@types/mapbox__mapbox-gl-draw": "^1.4.9",
     "@types/mapbox-gl": "^3.4.1",

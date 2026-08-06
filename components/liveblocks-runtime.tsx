@@ -26,6 +26,7 @@ import {
   useEventListener,
   useUpdateMyPresence,
 } from "@/lib/liveblocks";
+import { createInitialEvidenceStorage } from "@/lib/evidence-board-storage";
 import { useInvestigationStore } from "@/store/use-investigation-store";
 
 function createAgentId() {
@@ -41,29 +42,6 @@ function SecureConnectionFallback() {
       </div>
     </div>
   );
-}
-
-function ZustandRoomSync({ roomId }: { roomId: string }) {
-  const enterRoom = useInvestigationStore(
-    (state) => state.liveblocks.enterRoom,
-  );
-
-  useEffect(() => enterRoom(roomId), [enterRoom, roomId]);
-
-  return null;
-}
-
-function StorageGate({ children }: { children: ReactNode }) {
-  const status = useInvestigationStore((state) => state.liveblocks.status);
-  const isStorageLoading = useInvestigationStore(
-    (state) => state.liveblocks.isStorageLoading,
-  );
-
-  if (status !== "connected" || isStorageLoading) {
-    return <SecureConnectionFallback />;
-  }
-
-  return children;
 }
 
 function CollaborationSurface({
@@ -171,16 +149,17 @@ function ConnectedRuntime({
   const [agentId] = useState(createAgentId);
 
   return (
-    <RoomProvider id={roomId} initialPresence={{ x: null, y: null, agentId }}>
-      <ZustandRoomSync roomId={roomId} />
+    <RoomProvider
+      id={roomId}
+      initialPresence={{ x: null, y: null, agentId }}
+      initialStorage={createInitialEvidenceStorage}
+    >
       <ClientSideSuspense fallback={<SecureConnectionFallback />}>
-        <StorageGate>
-          <CollaborationSurface agentId={agentId}>
-            {children}
-            <LiveCommandPalette />
-            <IncomingOverrideListener />
-          </CollaborationSurface>
-        </StorageGate>
+        <CollaborationSurface agentId={agentId}>
+          {children}
+          <LiveCommandPalette />
+          <IncomingOverrideListener />
+        </CollaborationSurface>
       </ClientSideSuspense>
     </RoomProvider>
   );

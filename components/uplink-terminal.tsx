@@ -1,38 +1,47 @@
 "use client";
 
+import { ClientSideSuspense } from "@liveblocks/react";
+import type { Node } from "@xyflow/react";
 import { useSearchParams } from "next/navigation";
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import {
+  createInitialEvidenceStorage,
+  serializeFlowNode,
+} from "@/lib/evidence-board-storage";
 import {
   formatCaseName,
   isLiveblocksConfigured,
   LIVEBLOCKS_ROOM_ID,
   RoomProvider,
+  useMutation,
+  useStatus,
+  useStorage,
 } from "@/lib/liveblocks";
-import { useInvestigationStore } from "@/store/use-investigation-store";
 
 type TransmissionStatus = "idle" | "sending" | "sent";
 
 function UplinkInterface({ roomId }: { roomId: string }) {
-  const addNode = useInvestigationStore((state) => state.addNode);
-  const enterRoom = useInvestigationStore(
-    (state) => state.liveblocks.enterRoom,
-  );
-  const connectionStatus = useInvestigationStore(
-    (state) => state.liveblocks.status,
-  );
-  const isStorageLoading = useInvestigationStore(
-    (state) => state.liveblocks.isStorageLoading,
-  );
+  useStorage((root) => root.nodes.length);
+  const connectionStatus = useStatus();
+  const addNode = useMutation(({ storage }, intelText: string) => {
+    const timestamp = Date.now();
+    const node: Node = {
+      id: `note-${timestamp}-${crypto.randomUUID()}`,
+      type: "stickyNote",
+      position: { x: 250, y: 250 },
+      data: {
+        label: intelText,
+        timestamp,
+      },
+    };
+
+    storage.get("nodes").push(serializeFlowNode(node));
+  }, []);
   const [intel, setIntel] = useState("");
   const [status, setStatus] = useState<TransmissionStatus>("idle");
   const resetTimer = useRef<number | null>(null);
 
-  const isConnected = connectionStatus === "connected" && !isStorageLoading;
-
-  useEffect(() => {
-    const leaveRoom = enterRoom(roomId);
-    return leaveRoom;
-  }, [enterRoom, roomId]);
+  const isConnected = connectionStatus === "connected";
 
   useEffect(
     () => () => {
@@ -136,6 +145,16 @@ function MissingLiveblocksConfiguration() {
   );
 }
 
+function UplinkStorageFallback() {
+  return (
+    <main className="fixed inset-0 flex min-h-screen items-center justify-center overflow-y-auto bg-[#031820] p-6 font-mono text-[#6F8F96]">
+      <p className="animate-pulse text-center text-sm font-bold uppercase tracking-[0.16em]">
+        [ DECRYPTING LEDGER... ]
+      </p>
+    </main>
+  );
+}
+
 export function UplinkTerminal() {
   const searchParams = useSearchParams();
   const requestedCase = formatCaseName(searchParams.get("case") ?? "");
@@ -147,8 +166,11 @@ export function UplinkTerminal() {
     <RoomProvider
       id={roomId}
       initialPresence={{ x: null, y: null, agentId: "FIELD-UPLINK" }}
+      initialStorage={createInitialEvidenceStorage}
     >
-      <UplinkInterface roomId={roomId} />
+      <ClientSideSuspense fallback={<UplinkStorageFallback />}>
+        <UplinkInterface roomId={roomId} />
+      </ClientSideSuspense>
     </RoomProvider>
   );
 }
