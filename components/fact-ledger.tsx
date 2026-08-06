@@ -22,10 +22,12 @@ export function FactLedger() {
   const [activeFilter, setActiveFilter] = useState<FactFilter>("all");
   const facts = useInvestigationStore((state) => state.facts);
   const pinFactToBoard = useInvestigationStore((state) => state.pinFactToBoard);
-  const filteredFacts = facts.filter((fact) => matchesFilter(fact, activeFilter));
+  const filteredFacts = facts.filter((fact) =>
+    matchesFilter(fact, activeFilter),
+  );
 
   return (
-    <div className="h-full w-[360px] overflow-y-auto p-4 font-mono">
+    <div className="h-full w-full overflow-y-auto p-3 font-mono md:w-[360px] md:p-4">
       <div className="mb-4 border-4 border-[var(--ink)] bg-[var(--panel)] p-3 shadow-[4px_4px_0_var(--ink)] rounded-none">
         <p className="text-xs font-bold uppercase tracking-normal">
           Indexed Evidence
@@ -41,7 +43,7 @@ export function FactLedger() {
             key={filter.value}
             type="button"
             onClick={() => setActiveFilter(filter.value)}
-            className={`border-4 border-[var(--ink)] px-2 py-1 text-[11px] font-black uppercase shadow-[3px_3px_0_var(--ink)] rounded-none ${
+            className={`min-h-11 border-4 border-[var(--ink)] px-2 py-1 text-[11px] font-black uppercase shadow-[3px_3px_0_var(--ink)] rounded-none ${
               activeFilter === filter.value
                 ? "bg-[var(--ink)] text-[var(--paper)]"
                 : "bg-[var(--panel)] text-[var(--ink)]"
@@ -81,7 +83,7 @@ export function FactLedger() {
                 <button
                   type="button"
                   onClick={() => pinFactToBoard(fact.text)}
-                  className="w-full border-2 border-[var(--ink)] bg-[var(--accent)] px-1 py-2 text-[10px] font-black uppercase leading-tight text-[var(--ink)] shadow-[3px_3px_0_var(--ink)] active:translate-x-1 active:translate-y-1 active:shadow-none rounded-none"
+                  className="min-h-11 w-full border-2 border-[var(--ink)] bg-[var(--accent)] px-1 py-2 text-[10px] font-black uppercase leading-tight text-[var(--ink)] shadow-[3px_3px_0_var(--ink)] active:translate-x-1 active:translate-y-1 active:shadow-none rounded-none"
                 >
                   [ PIN TO BOARD ]
                 </button>

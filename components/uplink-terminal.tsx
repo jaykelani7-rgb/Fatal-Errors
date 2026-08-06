@@ -1,0 +1,154 @@
+"use client";
+
+import { useSearchParams } from "next/navigation";
+import { type FormEvent, useEffect, useRef, useState } from "react";
+import {
+  formatCaseName,
+  isLiveblocksConfigured,
+  LIVEBLOCKS_ROOM_ID,
+  RoomProvider,
+} from "@/lib/liveblocks";
+import { useInvestigationStore } from "@/store/use-investigation-store";
+
+type TransmissionStatus = "idle" | "sending" | "sent";
+
+function UplinkInterface({ roomId }: { roomId: string }) {
+  const addNode = useInvestigationStore((state) => state.addNode);
+  const enterRoom = useInvestigationStore(
+    (state) => state.liveblocks.enterRoom,
+  );
+  const connectionStatus = useInvestigationStore(
+    (state) => state.liveblocks.status,
+  );
+  const isStorageLoading = useInvestigationStore(
+    (state) => state.liveblocks.isStorageLoading,
+  );
+  const [intel, setIntel] = useState("");
+  const [status, setStatus] = useState<TransmissionStatus>("idle");
+  const resetTimer = useRef<number | null>(null);
+
+  const isConnected = connectionStatus === "connected" && !isStorageLoading;
+
+  useEffect(() => {
+    const leaveRoom = enterRoom(roomId);
+    return leaveRoom;
+  }, [enterRoom, roomId]);
+
+  useEffect(
+    () => () => {
+      if (resetTimer.current !== null) window.clearTimeout(resetTimer.current);
+    },
+    [],
+  );
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!intel.trim() || !isConnected || status !== "idle") return;
+
+    setStatus("sending");
+
+    if (typeof window !== "undefined" && navigator.vibrate) {
+      navigator.vibrate([20, 50, 20]);
+    }
+
+    addNode(intel);
+    setIntel("");
+    setStatus("sent");
+
+    resetTimer.current = window.setTimeout(() => {
+      setStatus("idle");
+      resetTimer.current = null;
+    }, 2000);
+  }
+
+  const isDisabled = !isConnected || !intel.trim() || status !== "idle";
+
+  return (
+    <main className="fixed inset-0 flex min-h-screen flex-col justify-center overflow-y-auto bg-[#031820] p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] font-mono text-[#F4F1DC]">
+      <div className="mx-auto flex w-full max-w-lg flex-col gap-6">
+        <header className="border-l-2 border-[#32D6A0] pl-4">
+          <p
+            className={`text-xs font-bold uppercase tracking-[0.16em] ${
+              isConnected ? "animate-pulse text-[#32D6A0]" : "text-[#6F8F96]"
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            {isConnected
+              ? "[ SECURE UPLINK ESTABLISHED ]"
+              : "[ ESTABLISHING SECURE UPLINK... ]"}
+          </p>
+          <h1 className="mt-3 text-3xl font-black uppercase leading-none tracking-tight">
+            Field Intelligence Relay
+          </h1>
+          <p className="mt-3 text-xs uppercase tracking-[0.12em] text-[#6F8F96]">
+            Case channel: {roomId}
+          </p>
+        </header>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <label
+            htmlFor="uplink-intel"
+            className="text-xs font-bold uppercase tracking-[0.14em] text-[#6F8F96]"
+          >
+            Intelligence payload
+          </label>
+          <textarea
+            id="uplink-intel"
+            value={intel}
+            onChange={(event) => setIntel(event.target.value)}
+            placeholder="ENTER FIELD INTELLIGENCE..."
+            rows={8}
+            autoFocus
+            className="min-h-52 w-full resize-none rounded-none border border-[#426D79] bg-transparent p-4 text-base leading-relaxed text-[#F4F1DC] outline-none placeholder:text-[#6F8F96] focus:border-[#32D6A0] disabled:opacity-50"
+            disabled={!isConnected || status !== "idle"}
+          />
+          <button
+            type="submit"
+            disabled={isDisabled}
+            className="min-h-14 w-full rounded-none border border-[#32D6A0] bg-[#32D6A0] px-5 py-4 text-base font-black uppercase tracking-[0.12em] text-[#031820] transition-colors active:bg-[#F4F1DC] disabled:cursor-not-allowed disabled:border-[#426D79] disabled:bg-[#144453] disabled:text-[#6F8F96]"
+          >
+            {status === "sent"
+              ? "[ TRANSMITTED ]"
+              : status === "sending"
+                ? "[ TRANSMITTING... ]"
+                : "[ TRANSMIT INTEL ]"}
+          </button>
+        </form>
+
+        <p className="border-t border-[#426D79] pt-4 text-[11px] uppercase leading-relaxed tracking-[0.12em] text-[#6F8F96]">
+          Payloads are inserted onto the command center evidence board at the
+          shared staging coordinates.
+        </p>
+      </div>
+    </main>
+  );
+}
+
+function MissingLiveblocksConfiguration() {
+  return (
+    <main className="fixed inset-0 flex min-h-screen items-center justify-center overflow-y-auto bg-[#031820] p-6 font-mono text-[#FF4D55]">
+      <p className="max-w-md border border-[#FF4D55] p-5 text-center text-sm font-bold uppercase tracking-[0.14em]">
+        [ UPLINK OFFLINE: LIVEBLOCKS KEY NOT CONFIGURED ]
+      </p>
+    </main>
+  );
+}
+
+export function UplinkTerminal() {
+  const searchParams = useSearchParams();
+  const requestedCase = formatCaseName(searchParams.get("case") ?? "");
+  const roomId = requestedCase || LIVEBLOCKS_ROOM_ID;
+
+  if (!isLiveblocksConfigured) return <MissingLiveblocksConfiguration />;
+
+  return (
+    <RoomProvider
+      id={roomId}
+      initialPresence={{ x: null, y: null, agentId: "FIELD-UPLINK" }}
+    >
+      <UplinkInterface roomId={roomId} />
+    </RoomProvider>
+  );
+}

@@ -11,9 +11,9 @@
   --ink: #000000;
   --panel: #ffffff;
   --line: #000000;
-  --accent: #FCD34D;
+  --accent: #fcd34d;
   --dim: #6b7280;
-  --danger: #D22B2B;
+  --danger: #d22b2b;
 
   color-scheme: light;
 }
@@ -25,7 +25,7 @@
   --line: #598392;
   --accent: #aec3b0;
   --dim: #598392;
-  --danger: #D22B2B;
+  --danger: #d22b2b;
 
   color-scheme: dark;
 }
@@ -39,8 +39,13 @@ body {
   min-height: 100%;
 }
 
+html {
+  background: var(--paper);
+}
+
 body {
   margin: 0;
+  overflow-x: hidden;
   background: var(--paper);
   color: var(--ink);
   font-family: "Courier New", Courier, monospace;
@@ -58,6 +63,15 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* ── React Flow ──────────────────────────────── */
@@ -141,8 +155,16 @@ textarea {
   filter: contrast(1.4);
 }
 
-.dark .fatal-map .mapboxgl-ctrl button.mapboxgl-ctrl-zoom-in .mapboxgl-ctrl-icon,
-.dark .fatal-map .mapboxgl-ctrl button.mapboxgl-ctrl-zoom-out .mapboxgl-ctrl-icon,
+.dark
+  .fatal-map
+  .mapboxgl-ctrl
+  button.mapboxgl-ctrl-zoom-in
+  .mapboxgl-ctrl-icon,
+.dark
+  .fatal-map
+  .mapboxgl-ctrl
+  button.mapboxgl-ctrl-zoom-out
+  .mapboxgl-ctrl-icon,
 .dark .fatal-map .mapbox-gl-draw_ctrl-draw-btn {
   filter: contrast(1.4) invert(1);
 }
@@ -245,11 +267,78 @@ textarea {
 /* ── Scan-line animation ─────────────────────── */
 
 @keyframes fatal-scanline {
-  0% { opacity: 1; }
-  50% { opacity: 0.3; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 .fatal-scanline {
   animation: fatal-scanline 2s ease-in-out infinite;
+}
+
+/* ── Global command palette ─────────────────── */
+
+@keyframes fatal-terminal-cursor {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  46%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fatal-radio-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 2px currentColor);
+  }
+  50% {
+    opacity: 0.45;
+    filter: drop-shadow(0 0 8px currentColor);
+  }
+}
+
+.fatal-terminal-cursor {
+  animation: fatal-terminal-cursor 0.9s steps(1, end) infinite;
+}
+
+.fatal-command-radio {
+  animation: fatal-radio-pulse 1.4s ease-in-out infinite;
+}
+
+.fatal-command-results {
+  scrollbar-color: #000000 #f4f4f0;
+  scrollbar-width: thin;
+}
+
+.dark .fatal-command-results {
+  scrollbar-color: #aec3b0 #01161e;
+}
+
+@media (max-width: 767px) {
+  button,
+  [role="button"] {
+    min-height: 44px;
+  }
+
+  .react-flow__controls-button {
+    height: 44px;
+    width: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fatal-terminal-cursor,
+  .fatal-command-radio {
+    animation: none;
+  }
 }

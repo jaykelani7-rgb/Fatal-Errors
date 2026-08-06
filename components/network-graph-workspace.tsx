@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import {
   Background,
@@ -15,8 +16,15 @@ import {
   type Node,
   type NodeProps,
 } from "@xyflow/react";
-import { FileSearch, MapPin, Phone, ReceiptText, UserRound } from "lucide-react";
+import {
+  FileSearch,
+  MapPin,
+  Phone,
+  ReceiptText,
+  UserRound,
+} from "lucide-react";
 import { useTheme } from "next-themes";
+import { triggerHaptic } from "@/lib/haptics";
 import { useInvestigationStore } from "@/store/use-investigation-store";
 
 type GraphNodeKind = "suspect" | "evidence" | "location" | "transaction";
@@ -53,10 +61,25 @@ type CaseGraphLink = {
   label: string;
 };
 
-const linkFilters: { id: LinkKind; label: string; tone: string; darkTone: string }[] = [
-  { id: "financial", label: "Financial Transactions", tone: "#D22B2B", darkTone: "#AEC3B0" },
+const linkFilters: {
+  id: LinkKind;
+  label: string;
+  tone: string;
+  darkTone: string;
+}[] = [
+  {
+    id: "financial",
+    label: "Financial Transactions",
+    tone: "#D22B2B",
+    darkTone: "#AEC3B0",
+  },
   { id: "phone", label: "Phone Calls", tone: "#111111", darkTone: "#EFF6E0" },
-  { id: "colocation", label: "Co-Locations", tone: "#FCD34D", darkTone: "#598392" },
+  {
+    id: "colocation",
+    label: "Co-Locations",
+    tone: "#FCD34D",
+    darkTone: "#598392",
+  },
 ];
 
 const graphNodes: CaseGraphNode[] = [
@@ -252,7 +275,10 @@ const graphLinks: CaseGraphLink[] = [
   },
 ];
 
-function getHopDistances(enabledKinds: Set<LinkKind>, subjectId: string | null) {
+function getHopDistances(
+  enabledKinds: Set<LinkKind>,
+  subjectId: string | null,
+) {
   if (!subjectId) {
     return new Map<string, number>();
   }
@@ -296,7 +322,14 @@ function getHopDistances(enabledKinds: Set<LinkKind>, subjectId: string | null) 
 /* ─── Node component ──────────────────────────── */
 
 function NetworkNode({ data, id }: NodeProps<Node<CaseGraphNodeData>>) {
-  const Icon = ({ suspect: UserRound, evidence: FileSearch, location: MapPin, transaction: ReceiptText } as const)[data.kind];
+  const Icon = (
+    {
+      suspect: UserRound,
+      evidence: FileSearch,
+      location: MapPin,
+      transaction: ReceiptText,
+    } as const
+  )[data.kind];
   const isSuspect = data.kind === "suspect";
   const isTransaction = data.kind === "transaction";
   const isEvidence = data.kind === "evidence";
@@ -315,13 +348,16 @@ function NetworkNode({ data, id }: NodeProps<Node<CaseGraphNodeData>>) {
 
   if (data.selected) {
     // Selected node: red highlight in both modes
-    kindClasses = "bg-[#D22B2B] text-white dark:bg-[#D22B2B] dark:text-[#EFF6E0] dark:border-[#D22B2B]";
+    kindClasses =
+      "bg-[#D22B2B] text-white dark:bg-[#D22B2B] dark:text-[#EFF6E0] dark:border-[#D22B2B]";
   } else if (isSuspect) {
     // Suspect: black in light → teal panel in dark
-    kindClasses = "bg-black text-white dark:bg-[#124559] dark:border dark:border-[#598392] dark:text-[#EFF6E0] dark:shadow-none";
+    kindClasses =
+      "bg-black text-white dark:bg-[#124559] dark:border dark:border-[#598392] dark:text-[#EFF6E0] dark:shadow-none";
   } else if (isTransaction) {
     // Transaction: yellow in light → translucent steel in dark (KILL YELLOW)
-    kindClasses = "bg-[#FCD34D] text-black dark:bg-[#598392]/20 dark:border dark:border-[#AEC3B0] dark:text-[#EFF6E0] dark:shadow-none";
+    kindClasses =
+      "bg-[#FCD34D] text-black dark:bg-[#598392]/20 dark:border dark:border-[#AEC3B0] dark:text-[#EFF6E0] dark:shadow-none";
   } else if (isEvidence || isLocation) {
     // Evidence/Location: white/parchment in light → deep void in dark
     kindClasses = `${isEvidence ? "bg-white" : "bg-[#F4F4F0]"} text-black dark:bg-[#01161E] dark:border dark:border-[#598392] dark:text-[#EFF6E0] dark:shadow-none`;
@@ -455,6 +491,7 @@ function NetworkGraphCanvas() {
     () => new Set(linkFilters.map((filter) => filter.id)),
   );
   const [hopLimit, setHopLimit] = useState(2);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
   const hopDistances = useMemo(
     () => getHopDistances(enabledLinkKinds, selectedSuspectId),
@@ -497,9 +534,7 @@ function NetworkGraphCanvas() {
 
   const activeNodeIds = useMemo(
     () =>
-      new Set(
-        nodes.filter((node) => node.data.active).map((node) => node.id),
-      ),
+      new Set(nodes.filter((node) => node.data.active).map((node) => node.id)),
     [nodes],
   );
 
@@ -543,6 +578,7 @@ function NetworkGraphCanvas() {
   const visibleEdgeCount = edges.filter((edge) => edge.data?.active).length;
 
   function toggleLinkKind(linkKind: LinkKind) {
+    triggerHaptic("light");
     setEnabledLinkKinds((currentKinds) => {
       const nextKinds = new Set(currentKinds);
 
@@ -556,115 +592,176 @@ function NetworkGraphCanvas() {
     });
   }
 
+  const filterControls = (
+    <div className="space-y-2 p-3">
+      {linkFilters.map((filter) => {
+        const checked = enabledLinkKinds.has(filter.id);
+        const count = graphLinks.filter(
+          (link) => link.linkKind === filter.id,
+        ).length;
+
+        return (
+          <label
+            key={filter.id}
+            className="flex min-h-11 cursor-pointer items-center gap-2 border-2 border-black bg-white px-2 py-2 shadow-[3px_3px_0_black] dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0] dark:shadow-none"
+          >
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={() => toggleLinkKind(filter.id)}
+              className="h-5 w-5 shrink-0 accent-black dark:accent-[#AEC3B0]"
+            />
+            <span
+              className="h-3 w-3 shrink-0 border-2 border-black dark:border-[#598392]"
+              style={{
+                backgroundColor: isDark ? filter.darkTone : filter.tone,
+              }}
+            />
+            <span className="min-w-0">
+              {filter.label} ({count})
+            </span>
+          </label>
+        );
+      })}
+
+      <label className="grid min-h-11 gap-2 border-2 border-black bg-white px-2 py-2 shadow-[3px_3px_0_black] dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0] dark:shadow-none">
+        <span>Hops From Subject: {hopLimit}</span>
+        <input
+          type="range"
+          min={1}
+          max={3}
+          step={1}
+          value={hopLimit}
+          onChange={(event) => {
+            triggerHaptic("light");
+            setHopLimit(Number(event.target.value));
+          }}
+          className="fatal-time-slider w-full"
+        />
+      </label>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="flex min-h-11 items-center border-2 border-black bg-white px-2 py-2 dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0]">
+          Edges: {visibleEdgeCount}
+        </div>
+        <button
+          type="button"
+          onClick={() => setSelectedSuspectId(null)}
+          className="min-h-11 border-2 border-black bg-[#FCD34D] px-2 py-2 text-left text-black shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none dark:border-[#AEC3B0] dark:bg-[#124559] dark:text-[#AEC3B0] dark:shadow-none dark:hover:bg-[#AEC3B0] dark:hover:text-[#01161E]"
+        >
+          Clear Subject
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="grid h-full min-h-[640px] bg-[#F4F4F0] dark:bg-[#01161E] lg:grid-cols-[330px_1fr]">
+    <div className="relative flex h-full min-h-0 w-full flex-1 bg-[#F4F4F0] dark:bg-[#01161E] md:grid md:min-h-[640px] md:grid-cols-[300px_1fr] lg:grid-cols-[330px_1fr]">
       {/* ── Sidebar ─────────────────────────────── */}
-      <aside className="z-10 border-b-4 border-black bg-[#F4F4F0] font-mono text-xs font-black uppercase dark:border-[#598392] dark:bg-[#124559] dark:text-[#EFF6E0] lg:border-b-0 lg:border-r-4">
+      <aside className="z-10 hidden border-r-4 border-black bg-[#F4F4F0] font-mono text-xs font-black uppercase dark:border-[#598392] dark:bg-[#124559] dark:text-[#EFF6E0] md:block">
         <div className="border-b-4 border-black bg-black px-3 py-2 text-[#F4F4F0] dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0]">
           Link Filters
         </div>
-        <div className="space-y-2 p-3">
-          {linkFilters.map((filter) => {
-            const checked = enabledLinkKinds.has(filter.id);
-            const count = graphLinks.filter(
-              (link) => link.linkKind === filter.id,
-            ).length;
-
-            return (
-              <label
-                key={filter.id}
-                className="flex cursor-pointer items-center gap-2 border-2 border-black bg-white px-2 py-2 shadow-[3px_3px_0_black] dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0] dark:shadow-none"
-              >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleLinkKind(filter.id)}
-                  className="h-4 w-4 shrink-0 accent-black dark:accent-[#AEC3B0]"
-                />
-                <span
-                  className="h-3 w-3 shrink-0 border-2 border-black dark:border-[#598392]"
-                  style={{ backgroundColor: isDark ? filter.darkTone : filter.tone }}
-                />
-                <span className="min-w-0">
-                  {filter.label} ({count})
-                </span>
-              </label>
-            );
-          })}
-
-          <label className="grid gap-2 border-2 border-black bg-white px-2 py-2 shadow-[3px_3px_0_black] dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0] dark:shadow-none">
-            <span>Hops From Subject: {hopLimit}</span>
-            <input
-              type="range"
-              min={1}
-              max={3}
-              step={1}
-              value={hopLimit}
-              onChange={(event) => setHopLimit(Number(event.target.value))}
-              className="fatal-time-slider w-full"
-            />
-          </label>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="border-2 border-black bg-white px-2 py-2 dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0]">
-              Edges: {visibleEdgeCount}
-            </div>
-            <button
-              type="button"
-              onClick={() => setSelectedSuspectId(null)}
-              className="border-2 border-black bg-[#FCD34D] px-2 py-2 text-left text-black shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none dark:border-[#AEC3B0] dark:bg-[#124559] dark:text-[#AEC3B0] dark:shadow-none dark:hover:bg-[#AEC3B0] dark:hover:text-[#01161E]"
-            >
-              Clear Subject
-            </button>
-          </div>
-        </div>
+        {filterControls}
       </aside>
 
-      {/* ── Graph ───────────────────────────────── */}
-      <div className="relative min-h-[520px]">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.16 }}
-        minZoom={0.55}
-        maxZoom={1.35}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable
-        className="bg-[#F4F4F0] dark:bg-[#01161E]"
+      <button
+        type="button"
+        onClick={() =>
+          setIsMobileFiltersOpen((open) => {
+            if (!open) triggerHaptic("light");
+            return !open;
+          })
+        }
+        aria-expanded={isMobileFiltersOpen}
+        aria-controls="mobile-link-filters"
+        className="absolute left-3 top-3 z-50 min-h-11 border-4 border-black bg-[#F4F4F0] px-3 font-mono text-xs font-black uppercase text-black shadow-[3px_3px_0_black] md:hidden dark:border-[#598392] dark:bg-[#124559] dark:text-[#EFF6E0] dark:shadow-[0_0_12px_rgba(1,22,30,0.75)]"
       >
-        <Background
-          variant={BackgroundVariant.Dots}
-          color={isDark ? "#598392" : "#000000"}
-          gap={24}
-          size={1.15}
-        />
+        [ {isMobileFiltersOpen ? "-" : "+"} ] Link Filters
+      </button>
 
-        {selectedNode ? (
-          <Panel position="bottom-right" className="m-0">
-            <div className="max-w-[320px] border-4 border-black bg-white p-3 font-mono text-xs font-black uppercase shadow-[6px_6px_0_black] dark:border-[#598392] dark:bg-[#124559] dark:text-[#EFF6E0] dark:shadow-[6px_6px_0_#01161E]">
-              <div className="mb-2 flex items-center gap-2 border-b-2 border-black pb-2 dark:border-[#598392]">
-                <Phone aria-hidden="true" size={17} strokeWidth={3} />
-                Subject Locked
+      <AnimatePresence>
+        {isMobileFiltersOpen ? (
+          <>
+            <motion.button
+              type="button"
+              aria-label="Close link filters"
+              className="absolute inset-0 z-[55] bg-black/55 backdrop-blur-sm md:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileFiltersOpen(false)}
+            />
+            <motion.aside
+              id="mobile-link-filters"
+              className="absolute inset-x-0 bottom-0 z-[60] max-h-[72%] overflow-y-auto border-t-4 border-black bg-[#F4F4F0] font-mono text-xs font-black uppercase shadow-[0_-4px_0_black] md:hidden dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0] dark:shadow-[0_-8px_24px_rgba(1,22,30,0.85)]"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              <div className="flex min-h-11 items-center justify-between border-b-4 border-black bg-black px-3 text-[#F4F4F0] dark:border-[#598392] dark:bg-[#124559] dark:text-[#EFF6E0]">
+                <span>[ LINK FILTERS ]</span>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileFiltersOpen(false)}
+                  className="h-11 min-w-11 border-x-2 border-black px-2 dark:border-[#598392]"
+                  aria-label="Close link filters"
+                >
+                  [ X ]
+                </button>
               </div>
-              <p className="mb-3 leading-tight">
-                {selectedNode.data.label} /{" "}
-                {selectedNode.data.risk ?? "UNKNOWN"} RISK / {hopLimit} HOPS
-              </p>
-              <button
-                type="button"
-                onClick={openLedger}
-                className="w-full border-4 border-black bg-[#D22B2B] px-3 py-2 text-left text-white shadow-[4px_4px_0_black] active:translate-x-1 active:translate-y-1 active:shadow-none dark:border-[#598392] dark:shadow-[4px_4px_0_#01161E]"
-              >
-                [ INSPECT DOSSIER ]
-              </button>
-            </div>
-          </Panel>
+              {filterControls}
+            </motion.aside>
+          </>
         ) : null}
-      </ReactFlow>
+      </AnimatePresence>
+
+      {/* ── Graph ───────────────────────────────── */}
+      <div className="relative h-full min-h-0 w-full flex-1 md:min-h-[520px]">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.16 }}
+          minZoom={0.55}
+          maxZoom={1.35}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable
+          className="bg-[#F4F4F0] dark:bg-[#01161E]"
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            color={isDark ? "#598392" : "#000000"}
+            gap={24}
+            size={1.15}
+          />
+
+          {selectedNode ? (
+            <Panel position="bottom-right" className="m-0">
+              <div className="max-w-[320px] border-4 border-black bg-white p-3 font-mono text-xs font-black uppercase shadow-[6px_6px_0_black] dark:border-[#598392] dark:bg-[#124559] dark:text-[#EFF6E0] dark:shadow-[6px_6px_0_#01161E]">
+                <div className="mb-2 flex items-center gap-2 border-b-2 border-black pb-2 dark:border-[#598392]">
+                  <Phone aria-hidden="true" size={17} strokeWidth={3} />
+                  Subject Locked
+                </div>
+                <p className="mb-3 leading-tight">
+                  {selectedNode.data.label} /{" "}
+                  {selectedNode.data.risk ?? "UNKNOWN"} RISK / {hopLimit} HOPS
+                </p>
+                <button
+                  type="button"
+                  onClick={openLedger}
+                  className="w-full border-4 border-black bg-[#D22B2B] px-3 py-2 text-left text-white shadow-[4px_4px_0_black] active:translate-x-1 active:translate-y-1 active:shadow-none dark:border-[#598392] dark:shadow-[4px_4px_0_#01161E]"
+                >
+                  [ INSPECT DOSSIER ]
+                </button>
+              </div>
+            </Panel>
+          ) : null}
+        </ReactFlow>
       </div>
     </div>
   );

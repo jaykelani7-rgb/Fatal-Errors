@@ -37,14 +37,18 @@ export function GlobalStatusBar() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 border-t-4 border-[var(--ink)] bg-[var(--ink)] px-4 py-2 font-mono text-[10px] font-black uppercase text-[var(--paper)]">
+    <div className="fixed bottom-0 left-0 right-0 z-40 hidden border-t-4 border-[var(--ink)] bg-[var(--ink)] px-4 py-2 font-mono text-[10px] font-black uppercase text-[var(--paper)] md:block">
       <div className="flex flex-wrap items-center gap-1">
         <span className="mr-1 text-[var(--accent)]">ACTIVE FILTERS:</span>
 
         {/* Crime types */}
         <span className="opacity-80">
           CRIME[
-          <span className={isDefaultCrimeTypes ? "opacity-40" : "text-[var(--danger)]"}>
+          <span
+            className={
+              isDefaultCrimeTypes ? "opacity-40" : "text-[var(--danger)]"
+            }
+          >
             {selectedCrimeTypes.length === 0
               ? "NONE"
               : selectedCrimeTypes.map((t) => t.toUpperCase()).join(", ")}
@@ -57,7 +61,9 @@ export function GlobalStatusBar() {
         {/* Time range */}
         <span className="opacity-80">
           TIME[
-          <span className={isDefaultTime ? "opacity-40" : "text-[var(--danger)]"}>
+          <span
+            className={isDefaultTime ? "opacity-40" : "text-[var(--danger)]"}
+          >
             {timeRange[0]} TO {timeRange[1]}
           </span>
           ]
@@ -68,7 +74,9 @@ export function GlobalStatusBar() {
         {/* Spatial bounds */}
         <span className="opacity-80">
           BOUNDS[
-          <span className={spatialBounds ? "text-[var(--danger)]" : "opacity-40"}>
+          <span
+            className={spatialBounds ? "text-[var(--danger)]" : "opacity-40"}
+          >
             {spatialBounds ? "SELECTED" : "NONE"}
           </span>
           ]
@@ -80,10 +88,12 @@ export function GlobalStatusBar() {
         <span className="opacity-80">
           SUSPECT[
           <span
-            className={selectedSuspectId ? "text-[var(--danger)]" : "opacity-40"}
+            className={
+              selectedSuspectId ? "text-[var(--danger)]" : "opacity-40"
+            }
           >
             {selectedSuspectId
-              ? suspectLabels[selectedSuspectId] ?? selectedSuspectId
+              ? (suspectLabels[selectedSuspectId] ?? selectedSuspectId)
               : "NONE"}
           </span>
           ]

@@ -21,7 +21,7 @@ export function WorkspaceBar() {
   );
 
   return (
-    <nav className="fixed left-0 top-20 z-10 flex h-16 w-full items-center gap-3 overflow-x-auto border-b-4 border-[var(--ink)] bg-[var(--paper)] px-5 font-mono shadow-[0_4px_0_var(--ink)] rounded-none">
+    <nav className="fixed left-0 top-20 z-10 hidden h-16 w-full items-center gap-3 overflow-x-auto border-b-4 border-[var(--ink)] bg-[var(--paper)] px-5 font-mono shadow-[0_4px_0_var(--ink)] rounded-none md:flex">
       {workspaces.map((workspace) => {
         const isActive = activeWorkspace === workspace.id;
 

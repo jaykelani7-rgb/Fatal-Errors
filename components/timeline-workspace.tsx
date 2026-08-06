@@ -1,12 +1,14 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Eye, FileText, X, ZoomIn, ZoomOut } from "lucide-react";
 import { useInvestigationStore } from "@/store/use-investigation-store";
 
 /* ─── TYPES ─────────────────────────────────────────────────── */
 
-type EventCategory = "CALL" | "ARREST" | "EVIDENCE" | "CCTV" | "FORENSIC" | "ANALYSIS";
+type EventCategory =
+  "CALL" | "ARREST" | "EVIDENCE" | "CCTV" | "FORENSIC" | "ANALYSIS";
 
 type TimelineEvent = {
   id: string;
@@ -38,7 +40,8 @@ const EVENTS: TimelineEvent[] = [
     timestamp: new Date("2026-07-18T21:14:00").getTime(),
     category: "CCTV",
     title: "Victim enters station",
-    description: "Platform 9 camera captures victim at 21:14. Last confirmed sighting.",
+    description:
+      "Platform 9 camera captures victim at 21:14. Last confirmed sighting.",
     severity: 9,
   },
   {
@@ -48,7 +51,8 @@ const EVENTS: TimelineEvent[] = [
     timestamp: new Date("2026-07-18T21:32:00").getTime(),
     category: "CALL",
     title: "Anonymous tip received",
-    description: "Switchboard logs anonymous call referencing Platform 9 disturbance.",
+    description:
+      "Switchboard logs anonymous call referencing Platform 9 disturbance.",
     severity: 6,
   },
   {
@@ -58,7 +62,8 @@ const EVENTS: TimelineEvent[] = [
     timestamp: new Date("2026-07-18T22:05:00").getTime(),
     category: "EVIDENCE",
     title: "Ticket stub recovered",
-    description: "Torn ticket stub found in inner coat pocket during initial sweep.",
+    description:
+      "Torn ticket stub found in inner coat pocket during initial sweep.",
     severity: 7,
   },
   {
@@ -68,7 +73,8 @@ const EVENTS: TimelineEvent[] = [
     timestamp: new Date("2026-07-19T08:30:00").getTime(),
     category: "FORENSIC",
     title: "Ticket ledger mismatch",
-    description: "Morning audit reveals ledger discrepancy — three entries lack counterfoils.",
+    description:
+      "Morning audit reveals ledger discrepancy — three entries lack counterfoils.",
     severity: 5,
   },
   {
@@ -78,7 +84,8 @@ const EVENTS: TimelineEvent[] = [
     timestamp: new Date("2026-07-20T01:15:00").getTime(),
     category: "CCTV",
     title: "Night clerk second visitor",
-    description: "CCTV corroborates clerk testimony: unidentified visitor at 01:15.",
+    description:
+      "CCTV corroborates clerk testimony: unidentified visitor at 01:15.",
     severity: 8,
   },
   {
@@ -88,7 +95,8 @@ const EVENTS: TimelineEvent[] = [
     timestamp: new Date("2026-07-20T02:40:00").getTime(),
     category: "CALL",
     title: "Clerk reports break-in attempt",
-    description: "Night clerk dials emergency line reporting forced entry at Annex B.",
+    description:
+      "Night clerk dials emergency line reporting forced entry at Annex B.",
     severity: 7,
   },
   {
@@ -98,7 +106,8 @@ const EVENTS: TimelineEvent[] = [
     timestamp: new Date("2026-07-20T06:10:00").getTime(),
     category: "ARREST",
     title: "Suspect A detained",
-    description: "Individual matching description apprehended near loading dock.",
+    description:
+      "Individual matching description apprehended near loading dock.",
     severity: 9,
   },
   {
@@ -118,7 +127,8 @@ const EVENTS: TimelineEvent[] = [
     timestamp: new Date("2026-07-21T14:20:00").getTime(),
     category: "FORENSIC",
     title: "Partial print from Annex B",
-    description: "Latent print recovered from forced door handle. Partial match pending.",
+    description:
+      "Latent print recovered from forced door handle. Partial match pending.",
     severity: 8,
   },
   {
@@ -128,7 +138,8 @@ const EVENTS: TimelineEvent[] = [
     timestamp: new Date("2026-07-22T09:00:00").getTime(),
     category: "ANALYSIS",
     title: "Cross-reference initiated",
-    description: "Analyst begins cross-referencing ledger anomalies with CCTV timestamps.",
+    description:
+      "Analyst begins cross-referencing ledger anomalies with CCTV timestamps.",
     severity: 4,
   },
   {
@@ -138,7 +149,8 @@ const EVENTS: TimelineEvent[] = [
     timestamp: new Date("2026-07-24T16:35:00").getTime(),
     category: "ARREST",
     title: "Suspect B identified",
-    description: "Second suspect identified through partial print match. Warrant issued.",
+    description:
+      "Second suspect identified through partial print match. Warrant issued.",
     severity: 9,
   },
   {
@@ -158,7 +170,8 @@ const EVENTS: TimelineEvent[] = [
     timestamp: new Date("2026-07-24T19:45:00").getTime(),
     category: "ARREST",
     title: "Suspect B apprehended",
-    description: "Suspect B taken into custody at Canal Street Market without incident.",
+    description:
+      "Suspect B taken into custody at Canal Street Market without incident.",
     severity: 10,
   },
   {
@@ -168,7 +181,8 @@ const EVENTS: TimelineEvent[] = [
     timestamp: new Date("2026-07-25T10:00:00").getTime(),
     category: "FORENSIC",
     title: "Accelerant trace confirmed",
-    description: "Lab confirms petroleum-based accelerant on loading dock samples.",
+    description:
+      "Lab confirms petroleum-based accelerant on loading dock samples.",
     severity: 6,
   },
   {
@@ -178,7 +192,8 @@ const EVENTS: TimelineEvent[] = [
     timestamp: new Date("2026-07-25T15:30:00").getTime(),
     category: "EVIDENCE",
     title: "Archive cage breach evidence",
-    description: "Cut lock recovered; tool marks consistent with compact bolt cutter.",
+    description:
+      "Cut lock recovered; tool marks consistent with compact bolt cutter.",
     severity: 7,
   },
   {
@@ -188,7 +203,8 @@ const EVENTS: TimelineEvent[] = [
     timestamp: new Date("2026-07-26T08:15:00").getTime(),
     category: "ANALYSIS",
     title: "Pattern link established",
-    description: "Analyst connects three incidents to single MO. Crime spree hypothesis elevated.",
+    description:
+      "Analyst connects three incidents to single MO. Crime spree hypothesis elevated.",
     severity: 8,
   },
   {
@@ -198,7 +214,8 @@ const EVENTS: TimelineEvent[] = [
     timestamp: new Date("2026-07-27T12:00:00").getTime(),
     category: "FORENSIC",
     title: "DNA sample submitted",
-    description: "Biological sample from ticket stub sent for expedited DNA analysis.",
+    description:
+      "Biological sample from ticket stub sent for expedited DNA analysis.",
     severity: 7,
   },
   {
@@ -208,7 +225,8 @@ const EVENTS: TimelineEvent[] = [
     timestamp: new Date("2026-07-28T09:30:00").getTime(),
     category: "ANALYSIS",
     title: "Cross-case link promoted",
-    description: "Three-case connection promoted from hypothesis to active lead.",
+    description:
+      "Three-case connection promoted from hypothesis to active lead.",
     severity: 9,
   },
 ];
@@ -222,7 +240,64 @@ const CATEGORY_COLORS: Record<EventCategory, string> = {
   ANALYSIS: "#D97706",
 };
 
-const ANNOTATION_ICONS: Record<AnnotationType, { icon: typeof Camera; label: string; emoji: string }> = {
+const CATEGORY_DARK_STYLES: Record<
+  EventCategory,
+  {
+    cardHover: string;
+    label: string;
+    markerBorder: string;
+    markerActive: string;
+    strip: string;
+  }
+> = {
+  CALL: {
+    cardHover: "hover:dark:border-[#FF4D55] hover:dark:bg-[#1B5262]",
+    label: "dark:border-[#FF4D55] dark:text-[#FF4D55]",
+    markerBorder: "dark:border-[#FF4D55]",
+    markerActive: "scale-110",
+    strip: "dark:!bg-[#FF4D55]",
+  },
+  ARREST: {
+    cardHover: "hover:dark:border-[#C5CBD0] hover:dark:bg-[#1B5262]",
+    label: "dark:border-[#C5CBD0] dark:text-[#C5CBD0]",
+    markerBorder: "dark:border-[#C5CBD0]",
+    markerActive: "scale-110",
+    strip: "dark:!bg-[#C5CBD0]",
+  },
+  EVIDENCE: {
+    cardHover: "hover:dark:border-[#FFD45A] hover:dark:bg-[#1B5262]",
+    label: "dark:border-[#FFD45A] dark:text-[#FFD45A]",
+    markerBorder: "dark:border-[#FFD45A]",
+    markerActive: "scale-110",
+    strip: "dark:!bg-[#FFD45A]",
+  },
+  CCTV: {
+    cardHover: "hover:dark:border-[#7C83FF] hover:dark:bg-[#1B5262]",
+    label: "dark:border-[#7C83FF] dark:text-[#7C83FF]",
+    markerBorder: "dark:border-[#7C83FF]",
+    markerActive: "scale-110",
+    strip: "dark:!bg-[#7C83FF]",
+  },
+  FORENSIC: {
+    cardHover: "hover:dark:border-[#32D6A0] hover:dark:bg-[#1B5262]",
+    label: "dark:border-[#32D6A0] dark:text-[#32D6A0]",
+    markerBorder: "dark:border-[#32D6A0]",
+    markerActive: "scale-110",
+    strip: "dark:!bg-[#32D6A0]",
+  },
+  ANALYSIS: {
+    cardHover: "hover:dark:border-[#FF9F43] hover:dark:bg-[#1B5262]",
+    label: "dark:border-[#FF9F43] dark:text-[#FF9F43]",
+    markerBorder: "dark:border-[#FF9F43]",
+    markerActive: "scale-110",
+    strip: "dark:!bg-[#FF9F43]",
+  },
+};
+
+const ANNOTATION_ICONS: Record<
+  AnnotationType,
+  { icon: typeof Camera; label: string; emoji: string }
+> = {
   cctv: { icon: Camera, label: "CCTV FOOTAGE", emoji: "📸" },
   eyewitness: { icon: Eye, label: "EYEWITNESS", emoji: "👁️" },
   document: { icon: FileText, label: "FORENSICS", emoji: "📄" },
@@ -241,8 +316,18 @@ const suspectTimelineLinks: Record<string, string[]> = {
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   const months = [
-    "JAN", "FEB", "MAR", "APR", "MAY", "JUN",
-    "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
+    "JAN",
+    "FEB",
+    "MAR",
+    "APR",
+    "MAY",
+    "JUN",
+    "JUL",
+    "AUG",
+    "SEP",
+    "OCT",
+    "NOV",
+    "DEC",
   ];
   return `${months[d.getMonth()]} ${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -250,7 +335,9 @@ function formatDate(dateStr: string): string {
 function daysBetween(a: string, b: string): number {
   const msDay = 86400000;
   return Math.abs(
-    (new Date(b + "T00:00:00").getTime() - new Date(a + "T00:00:00").getTime()) / msDay,
+    (new Date(b + "T00:00:00").getTime() -
+      new Date(a + "T00:00:00").getTime()) /
+      msDay,
   );
 }
 
@@ -302,7 +389,7 @@ function computeCompressedLayout(events: TimelineEvent[]): CompressedLayout {
 
     // Position each event within the segment
     for (let j = 0; j < group.length; j++) {
-      const eventX = segStart + (j * EVENT_NODE_SPACING);
+      const eventX = segStart + j * EVENT_NODE_SPACING;
       positions.set(group[j].id, eventX);
     }
 
@@ -313,15 +400,17 @@ function computeCompressedLayout(events: TimelineEvent[]): CompressedLayout {
       eventCount: group.length,
     });
 
-    cursor = segStart + Math.max(segmentWidth, group.length * EVENT_NODE_SPACING);
+    cursor =
+      segStart + Math.max(segmentWidth, group.length * EVENT_NODE_SPACING);
 
     // Add compressed gap to next date
     if (i < dates.length - 1) {
       const gap = daysBetween(date, dates[i + 1]);
       // Logarithmic compression for gaps
-      const gapWidth = gap <= 1
-        ? MIN_GAP_WIDTH
-        : Math.min(MAX_GAP_WIDTH, MIN_GAP_WIDTH + Math.log2(gap) * 14);
+      const gapWidth =
+        gap <= 1
+          ? MIN_GAP_WIDTH
+          : Math.min(MAX_GAP_WIDTH, MIN_GAP_WIDTH + Math.log2(gap) * 14);
       cursor += gapWidth;
     }
   }
@@ -382,54 +471,62 @@ function AnnotationPanel({
   const eventAnnotations = annotations.filter((a) => a.eventId === event.id);
 
   return (
-    <div className="absolute right-0 top-0 z-50 h-full w-[380px] border-l-4 border-black bg-[#F4F4F0] font-mono text-xs font-black uppercase shadow-[-6px_0_0_black] overflow-y-auto">
+    <div className="absolute right-0 top-0 z-50 h-full w-[380px] overflow-y-auto border-l-4 border-black bg-[#F4F4F0] font-mono text-xs font-black uppercase shadow-[-6px_0_0_black] dark:border-[#426D79] dark:bg-[#031820] dark:text-[#F4F1DC] dark:shadow-none">
       {/* Header */}
-      <div className="flex items-center justify-between border-b-4 border-black bg-black px-4 py-3 text-white">
+      <div className="flex items-center justify-between border-b-4 border-black bg-black px-4 py-3 text-white dark:border-[#426D79] dark:bg-[#08242D] dark:text-[#F4F1DC]">
         <span>Annotate Event</span>
         <button
           type="button"
           onClick={onClose}
-          className="flex h-7 w-7 items-center justify-center border-2 border-white hover:bg-white hover:text-black"
+          className="flex h-7 w-7 items-center justify-center rounded-none border-2 border-white hover:bg-white hover:text-black dark:border-[#FF4D55] dark:text-[#FF4D55] dark:hover:bg-[#FF4D55] dark:hover:text-[#031820]"
         >
           <X size={14} strokeWidth={3} />
         </button>
       </div>
 
       {/* Event Info */}
-      <div className="border-b-4 border-black p-4">
-        <div className="mb-2 inline-block px-2 py-1 text-white" style={{ backgroundColor: CATEGORY_COLORS[event.category] }}>
+      <div className="border-b-4 border-black p-4 dark:border-[#426D79]">
+        <div
+          className={`mb-2 inline-block rounded-none px-2 py-1 text-white dark:border dark:bg-[#031820] ${CATEGORY_DARK_STYLES[event.category].label}`}
+          style={{ backgroundColor: CATEGORY_COLORS[event.category] }}
+        >
           {event.category}
         </div>
-        <p className="text-sm">{event.id} — {event.date} {event.time}</p>
+        <p className="text-sm">
+          {event.id} — {event.date} {event.time}
+        </p>
         <p className="mt-2 normal-case leading-tight">{event.title}</p>
       </div>
 
       {/* Add Annotation */}
-      <div className="border-b-4 border-black p-4">
+      <div className="border-b-4 border-black p-4 dark:border-[#426D79]">
         <p className="mb-3">Add Intelligence Note</p>
         <div className="flex gap-2 mb-3">
-          {(Object.entries(ANNOTATION_ICONS) as [AnnotationType, typeof ANNOTATION_ICONS[AnnotationType]][]).map(
-            ([type, config]) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setSelectedType(type)}
-                className={`flex h-10 flex-1 items-center justify-center gap-1 border-4 border-black shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ${
-                  selectedType === type
-                    ? "bg-black text-white"
-                    : "bg-white hover:-translate-x-0.5 hover:-translate-y-0.5"
-                }`}
-              >
-                <span className="text-base not-italic">{config.emoji}</span>
-              </button>
-            ),
-          )}
+          {(
+            Object.entries(ANNOTATION_ICONS) as [
+              AnnotationType,
+              (typeof ANNOTATION_ICONS)[AnnotationType],
+            ][]
+          ).map(([type, config]) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setSelectedType(type)}
+              className={`flex h-10 flex-1 items-center justify-center gap-1 rounded-none border-4 border-black shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none dark:border dark:border-[#426D79] dark:shadow-[4px_4px_0_#011015] ${
+                selectedType === type
+                  ? "bg-black text-white dark:border-[#32D6A0] dark:bg-[#08242D] dark:text-[#32D6A0]"
+                  : "bg-white hover:-translate-x-0.5 hover:-translate-y-0.5 dark:bg-[#144453] dark:text-[#F4F1DC]"
+              }`}
+            >
+              <span className="text-base not-italic">{config.emoji}</span>
+            </button>
+          ))}
         </div>
         <textarea
           value={noteText}
           onChange={(e) => setNoteText(e.target.value)}
           placeholder="Enter annotation note..."
-          className="mb-3 block w-full resize-none border-4 border-black bg-white p-3 normal-case placeholder:uppercase placeholder:text-black/30 focus:outline-none"
+          className="mb-3 block w-full resize-none rounded-none border-4 border-black bg-white p-3 normal-case placeholder:uppercase placeholder:text-black/30 focus:outline-none dark:border dark:border-[#426D79] dark:bg-[#144453] dark:text-[#F4F1DC] dark:placeholder:text-[#6F8F96]"
           rows={3}
         />
         <button
@@ -441,7 +538,7 @@ function AnnotationPanel({
             }
           }}
           disabled={!noteText.trim()}
-          className="w-full border-4 border-black bg-[#FCD34D] py-2 shadow-[4px_4px_0_black] active:translate-x-1 active:translate-y-1 active:shadow-none disabled:opacity-40 disabled:shadow-none"
+          className="w-full rounded-none border-4 border-black bg-[#FCD34D] py-2 shadow-[4px_4px_0_black] active:translate-x-1 active:translate-y-1 active:shadow-none disabled:opacity-40 disabled:shadow-none dark:border dark:border-[#32D6A0] dark:bg-[#08242D] dark:text-[#32D6A0] dark:shadow-[4px_4px_0_#011015]"
         >
           Pin Annotation
         </button>
@@ -457,7 +554,7 @@ function AnnotationPanel({
               return (
                 <div
                   key={annotation.id}
-                  className="border-4 border-black bg-white p-3 shadow-[3px_3px_0_black]"
+                  className="rounded-none border-4 border-black bg-white p-3 shadow-[3px_3px_0_black] dark:border dark:border-[#426D79] dark:bg-[#144453] dark:text-[#F4F1DC] dark:shadow-[4px_4px_0_#011015]"
                 >
                   <div className="mb-2 flex items-center gap-2">
                     <span className="text-base">{config.emoji}</span>
@@ -486,18 +583,17 @@ function AnnotationCallout({
   const config = ANNOTATION_ICONS[annotation.type];
 
   return (
-    <div
-      className="absolute z-30 pointer-events-none"
-      style={style}
-    >
+    <div className="absolute z-30 pointer-events-none" style={style}>
       {/* Callout box */}
-      <div className="relative border-4 border-black bg-white px-2 py-1.5 font-mono text-[10px] font-black uppercase shadow-[3px_3px_0_black] whitespace-nowrap pointer-events-auto">
+      <div className="pointer-events-auto relative whitespace-nowrap rounded-none border-4 border-black bg-white px-2 py-1.5 font-mono text-[10px] font-black uppercase shadow-[3px_3px_0_black] dark:border dark:border-[#426D79] dark:bg-[#144453] dark:text-[#F4F1DC] dark:shadow-[4px_4px_0_#011015]">
         <span className="mr-1 text-sm not-italic">{config.emoji}</span>
         <span className="max-w-[120px] overflow-hidden text-ellipsis inline-block align-middle">
-          {annotation.note.length > 18 ? annotation.note.slice(0, 18) + "…" : annotation.note}
+          {annotation.note.length > 18
+            ? annotation.note.slice(0, 18) + "…"
+            : annotation.note}
         </span>
         {/* Arrow pointing down */}
-        <div className="absolute -bottom-[10px] left-4 h-0 w-0 border-l-[8px] border-r-[8px] border-t-[10px] border-l-transparent border-r-transparent border-t-black" />
+        <div className="absolute -bottom-[10px] left-4 h-0 w-0 border-l-[8px] border-r-[8px] border-t-[10px] border-l-transparent border-r-transparent border-t-black dark:border-t-[#426D79]" />
       </div>
     </div>
   );
@@ -564,15 +660,18 @@ function DensityHeatmapView({
           >
             {/* Tooltip */}
             <div className="pointer-events-none absolute -top-1 left-1/2 z-40 -translate-x-1/2 -translate-y-full opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="border-4 border-black bg-white px-2 py-1 font-mono text-[10px] font-black uppercase shadow-[3px_3px_0_black] whitespace-nowrap">
-                {formatDate(bucket.date)} — {bucket.count} EVENT{bucket.count > 1 ? "S" : ""}
+              <div className="border-4 border-black bg-white px-2 py-1 font-mono text-[10px] font-black uppercase shadow-[3px_3px_0_black] whitespace-nowrap dark:border dark:border-[#426D79] dark:bg-[#144453] dark:text-[#F4F1DC] dark:shadow-[4px_4px_0_#011015]">
+                {formatDate(bucket.date)} — {bucket.count} EVENT
+                {bucket.count > 1 ? "S" : ""}
               </div>
             </div>
 
             <div className="flex flex-1 items-end w-full">
               <div
-                className={`w-full border-2 border-black transition-all cursor-crosshair ${
-                  brushed ? "border-[#D22B2B]" : ""
+                className={`w-full border-2 border-black transition-all cursor-crosshair dark:border-[#426D79] ${
+                  brushed
+                    ? "border-[#D22B2B] dark:!border-[#FF4D55] dark:!bg-[#FF4D55]"
+                    : "dark:!bg-[#144453]"
                 }`}
                 style={{
                   height: `${Math.max(heightPct, 8)}%`,
@@ -605,7 +704,9 @@ export function TimelineWorkspace() {
 
   const [zoomLevel, setZoomLevel] = useState(1); // 0 = heatmap, 1–3 = detail zoom
   const [scrollX, setScrollX] = useState(0);
-  const [selectedEvent, setSelectedEvent] = useState<TimelineEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<TimelineEvent | null>(
+    null,
+  );
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [brushActive, setBrushActive] = useState(false);
   const [brushStart, setBrushStart] = useState<number | null>(null);
@@ -733,22 +834,24 @@ export function TimelineWorkspace() {
   const isHeatmapMode = zoomLevel === 0;
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden bg-[#F4F4F0] dark:bg-[#01161E]">
+    <div className="relative flex h-full flex-col overflow-hidden bg-[#F4F4F0] dark:bg-[#031820]">
       {/* ─── TOP TOOLBAR ──────────────────────────── */}
-      <div className="shrink-0 border-b-4 border-black bg-[#F4F4F0] dark:border-b-[1px] dark:border-[#598392] dark:bg-[#124559]">
-        <div className="flex items-center justify-between border-b-4 border-black bg-black px-4 py-3 dark:border-b-[1px] dark:border-[#598392] dark:bg-[#01161E]">
-          <h2 className="font-serif text-2xl font-black uppercase leading-none text-white md:text-3xl dark:text-[#EFF6E0]">
+      <div className="shrink-0 border-b-4 border-black bg-[#F4F4F0] dark:border-b-[1px] dark:border-[#426D79] dark:bg-[#08242D]">
+        <div className="flex items-center justify-between border-b-4 border-black bg-black px-4 py-3 dark:border-b-[1px] dark:border-[#426D79] dark:bg-[#08242D]">
+          <h2 className="font-serif text-2xl font-black uppercase leading-none text-white md:text-3xl dark:text-[#F4F1DC]">
             Timeline Analysis
           </h2>
-          <div className="flex items-center gap-2 font-mono text-[10px] font-black uppercase text-white dark:text-[#EFF6E0]">
-            <span className="hidden md:inline">{filteredEvents.length} Events Loaded</span>
-            <span className="inline-block h-2 w-2 animate-pulse bg-[#D22B2B] dark:bg-[#AEC3B0]" />
+          <div className="flex items-center gap-2 font-mono text-[10px] font-black uppercase text-white dark:text-[#F4F1DC]">
+            <span className="hidden md:inline">
+              {filteredEvents.length} Events Loaded
+            </span>
+            <span className="inline-block h-2 w-2 bg-[#D22B2B] dark:h-3 dark:w-3 dark:animate-pulse dark:rounded-none dark:bg-[#FF4D55] dark:shadow-none" />
             <span>LIVE</span>
           </div>
         </div>
 
         {/* Controls strip */}
-        <div className="flex flex-wrap items-center gap-3 px-4 py-3 font-mono text-xs font-black uppercase dark:text-[#EFF6E0]">
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3 font-mono text-xs font-black uppercase dark:text-[#F4F1DC]">
           {/* Date range */}
           <div className="flex items-center gap-2">
             <label className="flex items-center gap-1">
@@ -757,49 +860,54 @@ export function TimelineWorkspace() {
                 type="date"
                 value={timeRange[0]}
                 onChange={(e) => setTimeRange([e.target.value, timeRange[1]])}
-                className="border-4 border-black bg-white px-2 py-1.5 shadow-[3px_3px_0_black] focus:outline-none dark:border-[1px] dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0] dark:shadow-none"
+                className="border-4 border-black bg-white px-2 py-1.5 shadow-[3px_3px_0_black] focus:outline-none dark:border-[1px] dark:border-[#426D79] dark:bg-[#031820] dark:text-[#F4F1DC] dark:shadow-none"
               />
             </label>
-            <span className="text-black/40 dark:text-[#598392]">→</span>
+            <span className="text-black/40 dark:text-[#6F8F96]">→</span>
             <label className="flex items-center gap-1">
               TO
               <input
                 type="date"
                 value={timeRange[1]}
                 onChange={(e) => setTimeRange([timeRange[0], e.target.value])}
-                className="border-4 border-black bg-white px-2 py-1.5 shadow-[3px_3px_0_black] focus:outline-none dark:border-[1px] dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0] dark:shadow-none"
+                className="border-4 border-black bg-white px-2 py-1.5 shadow-[3px_3px_0_black] focus:outline-none dark:border-[1px] dark:border-[#426D79] dark:bg-[#031820] dark:text-[#F4F1DC] dark:shadow-none"
               />
             </label>
           </div>
 
-          <div className="h-6 w-[4px] bg-black hidden md:block dark:bg-[#598392]" />
+          <div className="h-6 w-[4px] bg-black hidden md:block dark:bg-[#426D79]" />
 
           {/* Zoom controls */}
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-black/60 dark:text-[#598392]">ZOOM</span>
+            <span className="text-[10px] text-black/60 dark:text-[#6F8F96]">
+              ZOOM
+            </span>
             <button
               type="button"
               onClick={() => setZoomLevel((z) => Math.max(z - 0.5, 0))}
-              className="flex h-8 w-8 items-center justify-center border-4 border-black bg-white shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none dark:border-[1px] dark:border-[#598392] dark:bg-[#01161E] dark:shadow-none"
+              className="flex h-8 w-8 items-center justify-center border-4 border-black bg-white shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none dark:border-[1px] dark:border-[#426D79] dark:bg-[#031820] dark:shadow-none"
             >
               <ZoomOut size={14} strokeWidth={3} />
             </button>
-            <div className="flex h-8 w-28 items-center border-4 border-black bg-white px-1 dark:border-[1px] dark:border-[#598392] dark:bg-[#01161E]">
-              <div className="relative h-1 w-full bg-black/20 dark:bg-[#598392]/30">
+            <div className="flex h-8 w-28 items-center border-4 border-black bg-white px-1 dark:border-[1px] dark:border-[#426D79] dark:bg-[#031820]">
+              <div className="relative h-1 w-full bg-black/20 dark:bg-[#426D79]/30">
                 <div
-                  className="absolute left-0 top-0 h-full bg-black transition-all dark:bg-[#598392]"
+                  className="absolute left-0 top-0 h-full bg-black transition-all dark:bg-[#426D79]"
                   style={{ width: `${(zoomLevel / 3) * 100}%` }}
                 />
                 <div
-                  className="absolute top-1/2 h-4 w-2 -translate-y-1/2 border-2 border-black bg-[#D22B2B] transition-all dark:border-[#AEC3B0] dark:bg-[#AEC3B0]"
-                  style={{ left: `${(zoomLevel / 3) * 100}%`, marginLeft: "-4px" }}
+                  className="absolute top-1/2 h-4 w-2 -translate-y-1/2 border-2 border-black bg-[#D22B2B] transition-all dark:border-[#32D6A0] dark:bg-[#32D6A0]"
+                  style={{
+                    left: `${(zoomLevel / 3) * 100}%`,
+                    marginLeft: "-4px",
+                  }}
                 />
               </div>
             </div>
             <button
               type="button"
               onClick={() => setZoomLevel((z) => Math.min(z + 0.5, 3))}
-              className="flex h-8 w-8 items-center justify-center border-4 border-black bg-white shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none dark:border-[1px] dark:border-[#598392] dark:bg-[#01161E] dark:shadow-none"
+              className="flex h-8 w-8 items-center justify-center border-4 border-black bg-white shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none dark:border-[1px] dark:border-[#426D79] dark:bg-[#031820] dark:shadow-none"
             >
               <ZoomIn size={14} strokeWidth={3} />
             </button>
@@ -808,7 +916,7 @@ export function TimelineWorkspace() {
             </span>
           </div>
 
-          <div className="h-6 w-[4px] bg-black hidden md:block dark:bg-[#598392]" />
+          <div className="h-6 w-[4px] bg-black hidden md:block dark:bg-[#426D79]" />
 
           {/* Brush toggle */}
           <button
@@ -820,11 +928,19 @@ export function TimelineWorkspace() {
             }}
             className={`flex h-8 items-center gap-1.5 border-4 border-black px-3 shadow-[3px_3px_0_black] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none dark:border-[1px] dark:shadow-none ${
               brushActive
-                ? "bg-[#D22B2B] text-white dark:border-[#AEC3B0] dark:bg-[#AEC3B0] dark:text-[#01161E]"
-                : "bg-white hover:-translate-x-0.5 hover:-translate-y-0.5 dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0] hover:dark:border-[#AEC3B0] hover:dark:text-[#AEC3B0]"
+                ? "bg-[#D22B2B] text-white dark:border-[#32D6A0] dark:bg-[#32D6A0] dark:text-[#031820]"
+                : "bg-white hover:-translate-x-0.5 hover:-translate-y-0.5 dark:border-[#426D79] dark:bg-[#031820] dark:text-[#F4F1DC] hover:dark:border-[#32D6A0] hover:dark:text-[#32D6A0]"
             }`}
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="square">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="square"
+            >
               <rect x="2" y="2" width="10" height="10" strokeDasharray="3 2" />
             </svg>
             BRUSH {brushActive ? "ON" : "OFF"}
@@ -839,19 +955,19 @@ export function TimelineWorkspace() {
               setBrushStart(null);
               setBrushEnd(null);
             }}
-            className="flex h-8 items-center gap-1 border-4 border-black bg-[#FCD34D] px-3 shadow-[3px_3px_0_black] active:translate-x-1 active:translate-y-1 active:shadow-none dark:border-[1px] dark:border-[#AEC3B0] dark:bg-[#124559] dark:text-[#AEC3B0] dark:shadow-none hover:dark:bg-[#AEC3B0] hover:dark:text-[#01161E]"
+            className="flex h-8 items-center gap-1 border-4 border-black bg-[#FCD34D] px-3 shadow-[3px_3px_0_black] active:translate-x-1 active:translate-y-1 active:shadow-none dark:border-[1px] dark:border-[#32D6A0] dark:bg-[#144453] dark:text-[#32D6A0] dark:shadow-none hover:dark:bg-[#32D6A0] hover:dark:text-[#031820]"
           >
             RESET
           </button>
         </div>
 
         {/* Category legend */}
-        <div className="flex flex-wrap gap-2 border-t-2 border-black/20 px-4 py-2 font-mono text-[10px] font-black uppercase dark:border-[#598392] dark:text-[#EFF6E0]">
+        <div className="flex flex-wrap gap-2 border-t-2 border-black/20 px-4 py-2 font-mono text-[10px] font-black uppercase dark:border-[#426D79] dark:text-[#F4F1DC]">
           {(Object.entries(CATEGORY_COLORS) as [EventCategory, string][]).map(
             ([category, color]) => (
               <span key={category} className="flex items-center gap-1">
                 <span
-                  className="inline-block h-3 w-3 border-2 border-black dark:border-[1px] dark:border-[#598392] dark:!bg-[#01161E]"
+                  className={`inline-block h-3 w-3 border-2 border-black dark:border-[1px] dark:border-[#426D79] ${CATEGORY_DARK_STYLES[category].strip}`}
                   style={{ backgroundColor: color }}
                 />
                 {category}
@@ -865,8 +981,8 @@ export function TimelineWorkspace() {
       <div className="relative flex-1 overflow-hidden">
         {isHeatmapMode ? (
           /* ─── DENSITY HEATMAP MODE ─────────────── */
-          <div className="h-full border-4 border-black bg-white mx-4 my-4 shadow-[4px_4px_0_black] dark:border-[1px] dark:border-[#598392] dark:bg-[#124559] dark:shadow-none">
-            <div className="border-b-4 border-black bg-[#F4F4F0] px-4 py-2 font-mono text-[10px] font-black uppercase dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0]">
+          <div className="h-full border-4 border-black bg-white mx-4 my-4 shadow-[4px_4px_0_black] dark:border-[1px] dark:border-[#426D79] dark:bg-[#144453] dark:shadow-[4px_4px_0_#011015]">
+            <div className="border-b-4 border-black bg-[#F4F4F0] px-4 py-2 font-mono text-[10px] font-black uppercase dark:border-[#426D79] dark:bg-[#08242D] dark:text-[#F4F1DC]">
               Activity Density Heatmap — {densityBuckets.length} Active Days
             </div>
             <DensityHeatmapView
@@ -892,11 +1008,14 @@ export function TimelineWorkspace() {
           >
             <div
               className="relative h-full"
-              style={{ width: `${Math.max(scaledWidth, 900)}px`, minHeight: "100%" }}
+              style={{
+                width: `${Math.max(scaledWidth, 900)}px`,
+                minHeight: "100%",
+              }}
             >
               {/* ─── AXIS LINE ──────────────────────── */}
               <div
-                className="absolute border-t-4 border-black dark:border-t-[1px] dark:border-[#598392]"
+                className="absolute border-t-4 border-black dark:h-[2px] dark:border-0 dark:bg-[#426D79]"
                 style={{
                   top: "60%",
                   left: 0,
@@ -914,12 +1033,12 @@ export function TimelineWorkspace() {
                     top: "calc(60% + 12px)",
                   }}
                 >
-                  <div className="border-l-4 border-black pl-2 py-1 dark:border-l-[1px] dark:border-[#598392]">
-                    <span className="bg-black px-1.5 py-0.5 text-white dark:border-[1px] dark:border-[#598392] dark:bg-[#124559] dark:text-[#AEC3B0]">
+                  <div className="border-l-4 border-black pl-2 py-1 dark:border-l-[1px] dark:border-[#426D79]">
+                    <span className="bg-black px-1.5 py-0.5 text-white dark:border-[1px] dark:border-[#426D79] dark:bg-[#144453] dark:text-[#32D6A0]">
                       {formatDate(seg.date)}
                     </span>
                     {seg.eventCount > 1 && (
-                      <span className="ml-1 bg-[#D22B2B] px-1 py-0.5 text-white text-[9px]">
+                      <span className="ml-1 bg-[#D22B2B] px-1 py-0.5 text-white text-[9px] dark:bg-[#FF4D55] dark:text-[#031820]">
                         ×{seg.eventCount}
                       </span>
                     )}
@@ -940,7 +1059,7 @@ export function TimelineWorkspace() {
                 return (
                   <div
                     key={`gap-${seg.date}`}
-                    className="absolute flex items-center justify-center font-mono text-[9px] font-black text-black/40"
+                    className="absolute flex items-center justify-center font-mono text-[9px] font-black text-black/40 dark:text-[#6F8F96]"
                     style={{
                       left: `${gapStart}px`,
                       width: `${gapEnd - gapStart}px`,
@@ -951,14 +1070,15 @@ export function TimelineWorkspace() {
                     <svg
                       width={Math.max(gapEnd - gapStart - 8, 10)}
                       height="16"
-                      className="stroke-black/30"
+                      className="stroke-black/30 dark:stroke-[#426D79]"
                       strokeWidth="2.5"
                       fill="none"
                       strokeLinecap="square"
                     >
                       <polyline
-                        points={Array.from({ length: Math.ceil((gapEnd - gapStart) / 8) }, (_, k) =>
-                          `${k * 8},${k % 2 === 0 ? 0 : 16}`,
+                        points={Array.from(
+                          { length: Math.ceil((gapEnd - gapStart) / 8) },
+                          (_, k) => `${k * 8},${k % 2 === 0 ? 0 : 16}`,
                         ).join(" ")}
                       />
                     </svg>
@@ -980,12 +1100,23 @@ export function TimelineWorkspace() {
                 const isSelected = selectedEvent?.id === event.id;
                 const isHovered = hoveredEvent === event.id;
                 const isSuspectLinked =
-                  suspectLinkedEvents !== null && suspectLinkedEvents.has(event.id);
+                  suspectLinkedEvents !== null &&
+                  suspectLinkedEvents.has(event.id);
                 const isDimmed =
-                  suspectLinkedEvents !== null && !suspectLinkedEvents.has(event.id);
+                  suspectLinkedEvents !== null &&
+                  !suspectLinkedEvents.has(event.id);
+                const categoryStyles = CATEGORY_DARK_STYLES[event.category];
 
                 return (
-                  <div key={event.id} className="absolute" style={{ left: `${x * zoomLevel}px`, top: 0, height: "100%" }}>
+                  <div
+                    key={event.id}
+                    className="absolute"
+                    style={{
+                      left: `${x * zoomLevel}px`,
+                      top: 0,
+                      height: "100%",
+                    }}
+                  >
                     {/* Annotation callouts (pinned above node) */}
                     {eventAnnotations.map((ann, annIdx) => (
                       <AnnotationCallout
@@ -1000,7 +1131,7 @@ export function TimelineWorkspace() {
 
                     {/* Vertical connector stem */}
                     <div
-                      className="absolute w-0 border-l-[3px] border-dashed border-black/40 dark:border-l-[1px] dark:border-[#598392]"
+                      className="absolute w-0 border-l-[3px] border-dashed border-black/40 dark:border-l-[1px] dark:border-[#426D79]"
                       style={{
                         left: "12px",
                         top: "14%",
@@ -1010,15 +1141,16 @@ export function TimelineWorkspace() {
                     />
 
                     {/* Event card (above axis) */}
-                    <div
-                      className={`absolute w-[140px] transition-all duration-200 ${
+                    <motion.div
+                      className={`absolute w-[140px] transition-all duration-200 hover:-translate-y-1 ${
                         brushActive ? "pointer-events-none" : "cursor-pointer"
                       }`}
+                      initial={false}
+                      animate={{ opacity: isDimmed ? 0.25 : 1 }}
+                      transition={{ duration: 0.2 }}
                       style={{
                         left: "-46px",
                         top: "calc(14% - 4px)",
-                        transform: isHovered ? "translateY(-4px)" : "none",
-                        opacity: isDimmed ? 0.25 : 1,
                         filter: isDimmed ? "grayscale(1)" : "none",
                       }}
                       onClick={() => {
@@ -1028,22 +1160,22 @@ export function TimelineWorkspace() {
                       onMouseLeave={() => setHoveredEvent(null)}
                     >
                       <div
-                        className={`border-4 p-2 font-mono text-[10px] font-black uppercase leading-tight transition-shadow dark:text-[#EFF6E0] ${
+                        className={`relative rounded-none border-4 p-2 font-mono text-[10px] font-black uppercase leading-tight transition-colors duration-150 dark:border dark:border-[#426D79] dark:bg-[#144453] dark:text-[#F4F1DC] dark:shadow-[4px_4px_0_#011015] ${categoryStyles.cardHover} ${
                           isSelected
-                            ? "border-black bg-[#FCD34D] shadow-[6px_6px_0_black] dark:border-[1px] dark:border-[#AEC3B0] dark:bg-[#124559] dark:shadow-none"
+                            ? "border-black bg-[#FCD34D] shadow-[6px_6px_0_black]"
                             : isSuspectLinked
-                              ? "border-[#D22B2B] bg-[#D22B2B]/10 shadow-[6px_6px_0_#D22B2B] dark:border-[1px] dark:border-[#AEC3B0] dark:bg-[#124559] dark:shadow-none"
-                              : "border-black bg-white shadow-[4px_4px_0_black] hover:shadow-[6px_6px_0_black] dark:border-[1px] dark:border-[#598392] dark:bg-[#124559] dark:shadow-none dark:hover:shadow-none"
+                              ? "border-[#D22B2B] bg-[#D22B2B]/10 shadow-[6px_6px_0_#D22B2B]"
+                              : "border-black bg-white shadow-[4px_4px_0_black] hover:shadow-[6px_6px_0_black]"
                         }`}
                       >
                         {/* Suspect-linked badge */}
                         {isSuspectLinked && (
-                          <div className="absolute -left-2 -top-2 flex h-5 items-center gap-0.5 border-2 border-[#D22B2B] bg-[#D22B2B] px-1 text-[8px] text-white dark:border-[1px] dark:border-[#AEC3B0] dark:bg-[#124559] dark:text-[#AEC3B0]">
+                          <div className="absolute -left-2 -top-2 flex h-5 items-center gap-0.5 border-2 border-[#D22B2B] bg-[#D22B2B] px-1 text-[8px] text-white dark:border-[1px] dark:border-[#32D6A0] dark:bg-[#144453] dark:text-[#32D6A0]">
                             ● LINKED
                           </div>
                         )}
                         <div
-                          className="mb-1 inline-block px-1 py-0.5 text-[9px] text-white dark:border-[1px] dark:border-[#598392] dark:!bg-[#01161E] dark:text-[#AEC3B0]"
+                          className={`mb-1 inline-block rounded-none px-1 py-0.5 text-[9px] text-white dark:border dark:!bg-[#031820] ${categoryStyles.label}`}
                           style={{
                             backgroundColor: CATEGORY_COLORS[event.category],
                           }}
@@ -1061,32 +1193,44 @@ export function TimelineWorkspace() {
                               key={i}
                               className={`h-[4px] flex-1 ${
                                 i < event.severity
-                                  ? event.severity >= 8
-                                    ? "bg-[#D22B2B] dark:bg-[#AEC3B0]"
-                                    : event.severity >= 5
-                                      ? "bg-[#D97706] dark:bg-[#AEC3B0]"
-                                      : "bg-[#059669] dark:bg-[#AEC3B0]"
-                                  : "bg-[#e5e5e5] dark:bg-[#598392]"
+                                  ? `${
+                                      event.severity >= 8
+                                        ? "bg-[#D22B2B]"
+                                        : event.severity >= 5
+                                          ? "bg-[#D97706]"
+                                          : "bg-[#059669]"
+                                    } ${categoryStyles.strip}`
+                                  : "bg-[#e5e5e5] dark:bg-[#426D79]"
                               }`}
+                            />
+                          ))}
+                        </div>
+                        <div className="mt-2 hidden grid-cols-5 gap-[2px] dark:grid">
+                          {Array.from({ length: 5 }, (_, segment) => (
+                            <span
+                              key={segment}
+                              className={`h-1 rounded-none ${categoryStyles.strip}`}
                             />
                           ))}
                         </div>
                         {/* Annotation badge count */}
                         {eventAnnotations.length > 0 && (
-                          <div className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center border-2 border-black bg-[#D22B2B] text-[9px] text-white">
+                          <div className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center border-2 border-black bg-[#D22B2B] text-[9px] text-white dark:border-[#426D79] dark:bg-[#FF4D55] dark:text-[#031820]">
                             {eventAnnotations.length}
                           </div>
                         )}
                       </div>
-                    </div>
+                    </motion.div>
 
                     {/* Node dot on axis */}
                     <div
-                      className={`absolute h-5 w-5 border-4 transition-all dark:border-[1px] dark:border-[#598392] dark:!bg-[#01161E] ${
+                      className={`absolute h-5 w-5 rounded-none border-4 transition-transform duration-150 hover:scale-110 dark:border ${categoryStyles.markerBorder} ${categoryStyles.strip} ${
+                        isHovered ? categoryStyles.markerActive : ""
+                      } ${
                         isSelected
-                          ? "scale-125 border-black bg-[#FCD34D] dark:!border-[#AEC3B0]"
+                          ? "scale-125 border-black bg-[#FCD34D]"
                           : isSuspectLinked
-                            ? "scale-125 border-[#D22B2B] bg-[#D22B2B] dark:!border-[#AEC3B0]"
+                            ? "scale-125 border-[#D22B2B] bg-[#D22B2B]"
                             : "border-black bg-white"
                       }`}
                       style={{
@@ -1110,7 +1254,7 @@ export function TimelineWorkspace() {
                 brushEnd !== null &&
                 isDraggingBrush.current && (
                   <div
-                    className="absolute top-0 h-full border-x-4 border-[#D22B2B] bg-[#D22B2B]/10 pointer-events-none z-20"
+                    className="absolute top-0 h-full border-x-4 border-[#D22B2B] bg-[#D22B2B]/10 pointer-events-none z-20 dark:border-[#FF4D55] dark:bg-[#FF4D55]/10"
                     style={{
                       left: `${Math.min(brushStart, brushEnd)}px`,
                       width: `${Math.abs(brushEnd - brushStart)}px`,
@@ -1133,26 +1277,24 @@ export function TimelineWorkspace() {
       </div>
 
       {/* ─── STATUS BAR ───────────────────────────── */}
-      <div className="shrink-0 border-t-4 border-black bg-black px-4 py-2 font-mono text-[10px] font-black uppercase text-[#F4F4F0]">
+      <div className="shrink-0 border-t-4 border-black bg-black px-4 py-2 font-mono text-[10px] font-black uppercase text-[#F4F4F0] dark:border-[#426D79] dark:bg-[#08242D] dark:text-[#F4F1DC]">
         <div className="flex flex-wrap items-center gap-4">
           <span>
             Range: {timeRange[0]} → {timeRange[1]}
           </span>
-          <span className="text-[#D22B2B]">
+          <span className="text-[#D22B2B] dark:text-[#FF4D55]">
             {filteredEvents.length} Events
           </span>
-          <span>
-            {annotations.length} Annotations
-          </span>
-          <span className="text-[#FCD34D]">
+          <span>{annotations.length} Annotations</span>
+          <span className="text-[#FCD34D] dark:text-[#FFD45A]">
             Zoom: {isHeatmapMode ? "HEATMAP" : `${zoomLevel.toFixed(1)}×`}
           </span>
           {brushActive && (
-            <span className="animate-pulse text-[#D22B2B]">
+            <span className="animate-pulse text-[#D22B2B] dark:text-[#FF4D55]">
               ● BRUSH ACTIVE — DRAG TO SELECT
             </span>
           )}
-          <span className="ml-auto text-white/40">
+          <span className="ml-auto text-white/40 dark:text-[#6F8F96]">
             FATAL//TIMELINE v2.0
           </span>
         </div>
