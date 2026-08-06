@@ -36,14 +36,19 @@ type CollaborationStorage = {
   edges: LiveList<StoredFlowEdge>;
 };
 
-const publicApiKey = process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY;
+// Liveblocks public keys are embedded in the browser bundle by design. Keep the
+// environment variable as an override, while providing the project's public key
+// as a deployment-safe fallback for hosts that do not copy `.env.local`.
+const defaultPublicApiKey =
+  "pk_dev_Tpjzr1_Gzo4_apRD2ip80XJC5uOe_KcW7V0nfUDXIz__w5UYXawRsQWtKMNpUp2C";
+
+const publicApiKey =
+  process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY?.trim() || defaultPublicApiKey;
 
 export const isLiveblocksConfigured = Boolean(publicApiKey);
 
-// The inert development key keeps local builds functional. The runtime only
-// enters a room when a real NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY is configured.
 export const liveblocksClient = createClient({
-  publicApiKey: publicApiKey ?? "pk_dev_missing",
+  publicApiKey,
 });
 
 const roomContext = createRoomContext<
