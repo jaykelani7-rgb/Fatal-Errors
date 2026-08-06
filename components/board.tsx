@@ -1,10 +1,14 @@
 "use client";
 
 import { ClientSideSuspense } from "@liveblocks/react";
-import { type DragEvent, useEffect, useMemo, useState } from "react";
 import {
-  applyEdgeChanges,
-  applyNodeChanges,
+  type DragEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
   Background,
   BackgroundVariant,
   Controls,
@@ -25,6 +29,8 @@ import {
   StickyNoteNode,
 } from "@/components/flow-nodes";
 import {
+  applyEdgeChangesToLiveList,
+  applyNodeChangesToLiveList,
   deserializeFlowEdges,
   deserializeFlowNodes,
   serializeFlowEdge,
@@ -216,27 +222,41 @@ function BoardSurface({
 }
 
 function LiveBoardCanvas() {
+  const { fitView } = useReactFlow();
   const storedNodes = useStorage((root) => root.nodes);
   const storedEdges = useStorage((root) => root.edges);
   const nodes = useMemo(() => deserializeFlowNodes(storedNodes), [storedNodes]);
   const edges = useMemo(() => deserializeFlowEdges(storedEdges), [storedEdges]);
+  const knownNodeIds = useRef(new Set(nodes.map((node) => node.id)));
+
+  useEffect(() => {
+    const incomingNode = nodes.find(
+      (node) =>
+        !knownNodeIds.current.has(node.id) &&
+        node.data.source === "FIELD-UPLINK",
+    );
+
+    knownNodeIds.current = new Set(nodes.map((node) => node.id));
+    if (!incomingNode) return;
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      void fitView({
+        nodes: [incomingNode],
+        duration: 500,
+        padding: 0.8,
+        maxZoom: 1.1,
+      });
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [fitView, nodes]);
 
   const onNodesChange = useMutation(({ storage }, changes: NodeChange[]) => {
-    const liveNodes = storage.get("nodes");
-    const currentNodes = deserializeFlowNodes(liveNodes.toJSON());
-    const nextNodes = applyNodeChanges(changes, currentNodes);
-
-    liveNodes.clear();
-    nextNodes.forEach((node) => liveNodes.push(serializeFlowNode(node)));
+    applyNodeChangesToLiveList(storage.get("nodes"), changes);
   }, []);
 
   const onEdgesChange = useMutation(({ storage }, changes: EdgeChange[]) => {
-    const liveEdges = storage.get("edges");
-    const currentEdges = deserializeFlowEdges(liveEdges.toJSON());
-    const nextEdges = applyEdgeChanges(changes, currentEdges);
-
-    liveEdges.clear();
-    nextEdges.forEach((edge) => liveEdges.push(serializeFlowEdge(edge)));
+    applyEdgeChangesToLiveList(storage.get("edges"), changes);
   }, []);
 
   const addEvidenceNode = useMutation(

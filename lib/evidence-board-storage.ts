@@ -1,5 +1,12 @@
 import { LiveList } from "@liveblocks/client";
-import type { Edge, Node } from "@xyflow/react";
+import {
+  applyEdgeChanges,
+  applyNodeChanges,
+  type Edge,
+  type EdgeChange,
+  type Node,
+  type NodeChange,
+} from "@xyflow/react";
 import type {
   StoredFlowEdge,
   StoredFlowNode,
@@ -70,4 +77,80 @@ export function deserializeFlowEdges(edges: readonly unknown[]): Edge[] {
       data: stored.data ? { ...stored.data } : undefined,
     } as unknown as Edge;
   });
+}
+
+/**
+ * Applies React Flow changes without clearing the shared list. Clearing and
+ * rebuilding the list on every drag frame can overwrite another collaborator's
+ * simultaneous insert or edit; targeted mutations allow Liveblocks to merge
+ * changes by list item instead.
+ */
+export function applyNodeChangesToLiveList(
+  liveNodes: LiveList<StoredFlowNode>,
+  changes: NodeChange[],
+) {
+  for (const change of changes) {
+    if (change.type === "add") {
+      const index = Math.min(change.index ?? liveNodes.length, liveNodes.length);
+      liveNodes.insert(serializeFlowNode(change.item), index);
+      continue;
+    }
+
+    const index = liveNodes.findIndex((node) => node.id === change.id);
+    if (index === -1) continue;
+
+    if (change.type === "remove") {
+      liveNodes.delete(index);
+      continue;
+    }
+
+    if (change.type === "replace") {
+      liveNodes.set(index, serializeFlowNode(change.item));
+      continue;
+    }
+
+    const storedNode = liveNodes.get(index);
+    if (!storedNode) continue;
+
+    const [nextNode] = applyNodeChanges(
+      [change],
+      deserializeFlowNodes([storedNode]),
+    );
+    if (nextNode) liveNodes.set(index, serializeFlowNode(nextNode));
+  }
+}
+
+export function applyEdgeChangesToLiveList(
+  liveEdges: LiveList<StoredFlowEdge>,
+  changes: EdgeChange[],
+) {
+  for (const change of changes) {
+    if (change.type === "add") {
+      const index = Math.min(change.index ?? liveEdges.length, liveEdges.length);
+      liveEdges.insert(serializeFlowEdge(change.item), index);
+      continue;
+    }
+
+    const index = liveEdges.findIndex((edge) => edge.id === change.id);
+    if (index === -1) continue;
+
+    if (change.type === "remove") {
+      liveEdges.delete(index);
+      continue;
+    }
+
+    if (change.type === "replace") {
+      liveEdges.set(index, serializeFlowEdge(change.item));
+      continue;
+    }
+
+    const storedEdge = liveEdges.get(index);
+    if (!storedEdge) continue;
+
+    const [nextEdge] = applyEdgeChanges(
+      [change],
+      deserializeFlowEdges([storedEdge]),
+    );
+    if (nextEdge) liveEdges.set(index, serializeFlowEdge(nextEdge));
+  }
 }

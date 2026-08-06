@@ -3,7 +3,7 @@
 import { ClientSideSuspense } from "@liveblocks/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { RadioTower } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
@@ -166,9 +166,21 @@ function ConnectedRuntime({
 }
 
 export function LiveblocksRuntime({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const requestedCase = formatCaseName(searchParams.get("case") ?? "");
   const roomId = requestedCase || LIVEBLOCKS_ROOM_ID;
+
+  useEffect(() => {
+    if (requestedCase) return;
+
+    const canonicalParams = new URLSearchParams(searchParams.toString());
+    canonicalParams.set("case", roomId);
+    router.replace(`${pathname}?${canonicalParams.toString()}`, {
+      scroll: false,
+    });
+  }, [pathname, requestedCase, roomId, router, searchParams]);
 
   if (!isLiveblocksConfigured) {
     return (

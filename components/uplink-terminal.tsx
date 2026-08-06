@@ -30,8 +30,9 @@ function UplinkInterface({ roomId }: { roomId: string }) {
       type: "stickyNote",
       position: { x: 250, y: 250 },
       data: {
-        label: intelText,
+        text: intelText,
         timestamp,
+        source: "FIELD-UPLINK",
       },
     };
 
