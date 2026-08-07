@@ -3,6 +3,7 @@
 import { ClientSideSuspense } from "@liveblocks/react";
 import {
   type DragEvent,
+  type PointerEvent as ReactPointerEvent,
   useEffect,
   useMemo,
   useRef,
@@ -69,8 +70,28 @@ const evidenceItems: EvidenceItem[] = [
   { label: "Suspect Polaroid", nodeType: "polaroid" },
 ];
 
-function EvidenceBox() {
+type TouchEvidenceDrag = {
+  pointerId: number;
+  nodeType: EvidenceNodeType;
+  label: string;
+  startX: number;
+  startY: number;
+  x: number;
+  y: number;
+};
+
+function EvidenceBox({
+  onMobilePlace,
+}: {
+  onMobilePlace: (
+    nodeType: EvidenceNodeType,
+    screenPosition?: XYPosition,
+  ) => void;
+}) {
   const [isOpen, setIsOpen] = useState(false);
+  const [touchDrag, setTouchDrag] = useState<TouchEvidenceDrag | null>(null);
+  const touchDragRef = useRef<TouchEvidenceDrag | null>(null);
+  const lastTouchPlacementAtRef = useRef(0);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
@@ -87,6 +108,67 @@ function EvidenceBox() {
   ) {
     event.dataTransfer.setData(dragTransferType, nodeType);
     event.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleTouchDragStart(
+    event: ReactPointerEvent<HTMLButtonElement>,
+    item: EvidenceItem,
+  ) {
+    if (event.pointerType === "mouse") return;
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const nextDrag: TouchEvidenceDrag = {
+      pointerId: event.pointerId,
+      nodeType: item.nodeType,
+      label: item.label,
+      startX: event.clientX,
+      startY: event.clientY,
+      x: event.clientX,
+      y: event.clientY,
+    };
+    touchDragRef.current = nextDrag;
+    setTouchDrag(nextDrag);
+  }
+
+  function handleTouchDragMove(event: ReactPointerEvent<HTMLButtonElement>) {
+    const currentDrag = touchDragRef.current;
+    if (!currentDrag || currentDrag.pointerId !== event.pointerId) return;
+
+    event.preventDefault();
+    const nextDrag = {
+      ...currentDrag,
+      x: event.clientX,
+      y: event.clientY,
+    };
+    touchDragRef.current = nextDrag;
+    setTouchDrag(nextDrag);
+  }
+
+  function finishTouchDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    const currentDrag = touchDragRef.current;
+    if (!currentDrag || currentDrag.pointerId !== event.pointerId) return;
+
+    event.preventDefault();
+    lastTouchPlacementAtRef.current = Date.now();
+
+    const distance = Math.hypot(
+      event.clientX - currentDrag.startX,
+      event.clientY - currentDrag.startY,
+    );
+    onMobilePlace(
+      currentDrag.nodeType,
+      distance >= 8 ? { x: event.clientX, y: event.clientY } : undefined,
+    );
+    triggerHaptic("light");
+    touchDragRef.current = null;
+    setTouchDrag(null);
+  }
+
+  function cancelTouchDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (touchDragRef.current?.pointerId !== event.pointerId) return;
+    touchDragRef.current = null;
+    setTouchDrag(null);
   }
 
   return (
@@ -111,15 +193,46 @@ function EvidenceBox() {
       {isOpen ? (
         <div id="evidence-box-actions" className="space-y-2">
           {evidenceItems.map((item) => (
-            <div
-              key={item.nodeType}
-              draggable
-              onDragStart={(event) => handleDragStart(event, item.nodeType)}
-              className="flex min-h-11 cursor-grab items-center border-2 border-[var(--ink)] bg-[var(--paper)] px-3 py-2 text-xs font-bold uppercase shadow-[3px_3px_0_var(--ink)] active:cursor-grabbing rounded-none"
-            >
-              {item.label}
+            <div key={item.nodeType}>
+              <div
+                draggable
+                onDragStart={(event) => handleDragStart(event, item.nodeType)}
+                className="hidden min-h-11 cursor-grab items-center border-2 border-[var(--ink)] bg-[var(--paper)] px-3 py-2 text-xs font-bold uppercase shadow-[3px_3px_0_var(--ink)] active:cursor-grabbing rounded-none md:flex"
+              >
+                {item.label}
+              </div>
+              <button
+                type="button"
+                onPointerDown={(event) => handleTouchDragStart(event, item)}
+                onPointerMove={handleTouchDragMove}
+                onPointerUp={finishTouchDrag}
+                onPointerCancel={cancelTouchDrag}
+                onClick={() => {
+                  // Touch browsers may synthesize a delayed click after the
+                  // pointer-up placement. Ignore it so one gesture adds one node.
+                  if (Date.now() - lastTouchPlacementAtRef.current < 500) return;
+                  onMobilePlace(item.nodeType);
+                  triggerHaptic("light");
+                }}
+                className="flex min-h-11 w-full touch-none items-center justify-between border-2 border-[var(--ink)] bg-[var(--paper)] px-3 py-2 text-left text-xs font-bold uppercase shadow-[3px_3px_0_var(--ink)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none rounded-none md:hidden"
+                aria-label={`Add ${item.label} to board`}
+              >
+                <span>{item.label}</span>
+                <span className="text-[9px] opacity-65">Tap / Drag</span>
+              </button>
             </div>
           ))}
+        </div>
+      ) : null}
+
+      {touchDrag ? (
+        <div
+          className="pointer-events-none fixed left-0 top-0 z-[100] border-2 border-[var(--ink)] bg-[var(--accent)] px-3 py-2 text-[10px] font-black uppercase shadow-[3px_3px_0_var(--ink)]"
+          style={{
+            transform: `translate3d(${touchDrag.x + 12}px, ${touchDrag.y + 12}px, 0)`,
+          }}
+        >
+          {touchDrag.label}
         </div>
       ) : null}
     </div>
@@ -147,6 +260,7 @@ function BoardSurface({
 }: BoardSurfaceProps) {
   const { screenToFlowPosition } = useReactFlow();
   const { agentId } = useCollaborationIdentity();
+  const boardRef = useRef<HTMLDivElement>(null);
 
   const renderedNodes = useMemo(
     () =>
@@ -179,6 +293,29 @@ function BoardSurface({
     );
   }
 
+  function handleMobilePlace(
+    nodeType: EvidenceNodeType,
+    screenPosition?: XYPosition,
+  ) {
+    const bounds = boardRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+
+    const isInsideBoard =
+      screenPosition &&
+      screenPosition.x >= bounds.left &&
+      screenPosition.x <= bounds.right &&
+      screenPosition.y >= bounds.top &&
+      screenPosition.y <= bounds.bottom;
+    const target = isInsideBoard
+      ? screenPosition
+      : {
+          x: bounds.left + bounds.width / 2,
+          y: bounds.top + bounds.height / 2,
+        };
+
+    addEvidenceNode(nodeType, screenToFlowPosition(target));
+  }
+
   function handleNodeDragStart(_event: unknown, node: Node) {
     const lockedBy =
       typeof node.data.lockedBy === "string" ? node.data.lockedBy : null;
@@ -193,8 +330,11 @@ function BoardSurface({
   }
 
   return (
-    <div className="relative h-full w-full bg-[var(--paper)]">
-      <EvidenceBox />
+    <div
+      ref={boardRef}
+      className="relative h-full w-full bg-[var(--paper)]"
+    >
+      <EvidenceBox onMobilePlace={handleMobilePlace} />
       <ReactFlow
         nodes={renderedNodes}
         edges={edges}
