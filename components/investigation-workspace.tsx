@@ -50,7 +50,7 @@ export function InvestigationWorkspace() {
 
   return (
     <LiveblocksRuntime>
-      <div className="min-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom))] overflow-x-hidden bg-[var(--paper)] text-[var(--ink)] md:min-h-screen">
+      <div className="h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom))] overflow-hidden bg-[var(--paper)] text-[var(--ink)] md:h-screen">
         <header className="fixed left-0 top-[env(safe-area-inset-top)] z-50 flex h-16 w-full items-center justify-between gap-2 border-b-4 border-[var(--ink)] bg-[var(--paper)] p-2 shadow-[0_4px_0_var(--ink)] rounded-none md:top-0 md:z-20 md:h-20 md:px-5">
           <div className="hidden min-w-0 md:block">
             <p className="hidden font-mono text-xs uppercase tracking-normal md:block">
@@ -106,7 +106,7 @@ export function InvestigationWorkspace() {
           <aside
             id="fact-ledger"
             className={`hidden h-full shrink-0 overflow-hidden bg-[var(--paper)] transition-[width] duration-300 ease-in-out md:block ${
-              isLedgerOpen ? "md:w-[360px]" : "md:w-0"
+              isLedgerOpen ? "md:w-[clamp(280px,30vw,360px)]" : "md:w-0"
             }`}
           >
             <FactLedger />

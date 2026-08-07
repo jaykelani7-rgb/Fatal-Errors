@@ -5,7 +5,7 @@ import { Check, Copy, RadioTower, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useMemo, useState } from "react";
-import { formatCaseName, LIVEBLOCKS_ROOM_ID } from "@/lib/liveblocks";
+import { formatCaseName } from "@/lib/liveblocks";
 import { triggerHaptic } from "@/lib/haptics";
 import { useInvestigationStore } from "@/store/use-investigation-store";
 
@@ -16,9 +16,9 @@ export function QRUplinkModal() {
   const [origin, setOrigin] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const requestedCase = formatCaseName(searchParams.get("case") ?? "");
-  const roomId = requestedCase || LIVEBLOCKS_ROOM_ID;
+  const roomId = formatCaseName(searchParams.get("case") ?? "");
   const uplinkUrl = useMemo(() => {
+    if (!roomId) return "";
     if (!origin) return `/uplink?case=${encodeURIComponent(roomId)}`;
     return `${origin}/uplink?case=${encodeURIComponent(roomId)}`;
   }, [origin, roomId]);
@@ -41,6 +41,8 @@ export function QRUplinkModal() {
   }, [isOpen]);
 
   async function copyUplink() {
+    if (!uplinkUrl) return;
+
     await navigator.clipboard.writeText(uplinkUrl);
     triggerHaptic("light");
     setCopied(true);
@@ -94,37 +96,50 @@ export function QRUplinkModal() {
             </header>
 
             <div className="py-5">
-              <div className="mx-auto w-fit border-4 border-black bg-[#F4F4F0] p-3 shadow-[4px_4px_0_black] dark:border-[#426D79] dark:shadow-[4px_4px_0_#011015]">
-                <QRCodeSVG
-                  value={uplinkUrl}
-                  size={232}
-                  level="M"
-                  marginSize={1}
-                  bgColor="#F4F4F0"
-                  fgColor="#031820"
-                  title={`Field uplink for ${roomId}`}
-                />
-              </div>
+              {roomId ? (
+                <>
+                  <div className="mx-auto w-fit border-4 border-black bg-[#F4F4F0] p-3 shadow-[4px_4px_0_black] dark:border-[#426D79] dark:shadow-[4px_4px_0_#011015]">
+                    <QRCodeSVG
+                      value={uplinkUrl}
+                      size={232}
+                      level="M"
+                      marginSize={1}
+                      bgColor="#F4F4F0"
+                      fgColor="#031820"
+                      title={`Field uplink for ${roomId}`}
+                    />
+                  </div>
 
-              <p className="mt-5 text-center text-xs font-black uppercase tracking-[0.14em]">
-                Scan to join case channel
-              </p>
-              <p className="mt-2 break-all text-center text-[10px] uppercase leading-relaxed text-black/55 dark:text-[#6F8F96]">
-                {uplinkUrl}
-              </p>
+                  <p className="mt-5 text-center text-xs font-black uppercase tracking-[0.14em]">
+                    Scan to join case channel
+                  </p>
+                  <p className="mt-2 break-all text-center text-[10px] uppercase leading-relaxed text-black/55 dark:text-[#6F8F96]">
+                    {uplinkUrl}
+                  </p>
+                </>
+              ) : (
+                <div className="border-4 border-[#D22B2B] bg-white p-5 text-center text-xs font-black uppercase leading-relaxed tracking-[0.12em] text-[#D22B2B] shadow-[4px_4px_0_black] dark:border dark:border-[#FFD45A] dark:bg-[#031820] dark:text-[#FFD45A] dark:shadow-[4px_4px_0_#011015]">
+                  [ CREATE OR JOIN A CASE BEFORE DEPLOYING AN UPLINK ]
+                </div>
+              )}
             </div>
 
             <button
               type="button"
               onClick={copyUplink}
-              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-none border-4 border-black bg-black px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-white shadow-[4px_4px_0_#D22B2B] active:translate-x-1 active:translate-y-1 active:shadow-none dark:border dark:border-[#32D6A0] dark:bg-[#144453] dark:text-[#32D6A0] dark:shadow-[4px_4px_0_#011015]"
+              disabled={!roomId}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-none border-4 border-black bg-black px-4 py-3 text-xs font-black uppercase tracking-[0.12em] text-white shadow-[4px_4px_0_#D22B2B] active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-45 dark:border dark:border-[#32D6A0] dark:bg-[#144453] dark:text-[#32D6A0] dark:shadow-[4px_4px_0_#011015]"
             >
               {copied ? (
                 <Check aria-hidden="true" size={17} />
               ) : (
                 <Copy aria-hidden="true" size={17} />
               )}
-              {copied ? "[ UPLINK COPIED ]" : "[ COPY UPLINK ]"}
+              {!roomId
+                ? "[ CASE REQUIRED ]"
+                : copied
+                  ? "[ UPLINK COPIED ]"
+                  : "[ COPY UPLINK ]"}
             </button>
           </motion.section>
         </motion.div>
