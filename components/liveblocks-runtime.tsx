@@ -3,7 +3,7 @@
 import { ClientSideSuspense } from "@liveblocks/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { RadioTower } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
@@ -21,7 +21,6 @@ import { LiveCursors } from "@/components/live-cursors";
 import {
   isLiveblocksConfigured,
   formatCaseName,
-  LIVEBLOCKS_ROOM_ID,
   RoomProvider,
   useEventListener,
   useUpdateMyPresence,
@@ -166,23 +165,12 @@ function ConnectedRuntime({
 }
 
 export function LiveblocksRuntime({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const requestedCase = formatCaseName(searchParams.get("case") ?? "");
-  const roomId = requestedCase || LIVEBLOCKS_ROOM_ID;
 
-  useEffect(() => {
-    if (requestedCase) return;
-
-    const canonicalParams = new URLSearchParams(searchParams.toString());
-    canonicalParams.set("case", roomId);
-    router.replace(`${pathname}?${canonicalParams.toString()}`, {
-      scroll: false,
-    });
-  }, [pathname, requestedCase, roomId, router, searchParams]);
-
-  if (!isLiveblocksConfigured) {
+  // An absent/empty case is intentionally local-only. Liveblocks must never
+  // fall back to a shared room because that exposes another case's history.
+  if (!requestedCase || !isLiveblocksConfigured) {
     return (
       <CollaborationProvider agentId="AGENT-01" isMultiplayer={false}>
         {children}
@@ -192,7 +180,7 @@ export function LiveblocksRuntime({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ConnectedRuntime key={roomId} roomId={roomId}>
+    <ConnectedRuntime key={requestedCase} roomId={requestedCase}>
       {children}
     </ConnectedRuntime>
   );

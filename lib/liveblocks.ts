@@ -6,9 +6,6 @@ import type {
   StoredFlowNode,
 } from "@/lib/evidence-board-types";
 
-export const LIVEBLOCKS_ROOM_ID =
-  process.env.NEXT_PUBLIC_LIVEBLOCKS_ROOM_ID ?? "case-tb-001041";
-
 export function formatCaseName(value: string) {
   return value
     .trim()

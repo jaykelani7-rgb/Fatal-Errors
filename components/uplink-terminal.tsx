@@ -11,7 +11,6 @@ import {
 import {
   formatCaseName,
   isLiveblocksConfigured,
-  LIVEBLOCKS_ROOM_ID,
   RoomProvider,
   useMutation,
   useStatus,
@@ -146,6 +145,16 @@ function MissingLiveblocksConfiguration() {
   );
 }
 
+function MissingCaseId() {
+  return (
+    <main className="fixed inset-0 flex min-h-screen items-center justify-center overflow-y-auto bg-[#031820] p-6 font-mono text-[#FFD45A]">
+      <p className="max-w-md border border-[#FFD45A] p-5 text-center text-sm font-bold uppercase tracking-[0.14em]">
+        [ UPLINK OFFLINE: CASE ID NOT PROVIDED ]
+      </p>
+    </main>
+  );
+}
+
 function UplinkStorageFallback() {
   return (
     <main className="fixed inset-0 flex min-h-screen items-center justify-center overflow-y-auto bg-[#031820] p-6 font-mono text-[#6F8F96]">
@@ -159,18 +168,18 @@ function UplinkStorageFallback() {
 export function UplinkTerminal() {
   const searchParams = useSearchParams();
   const requestedCase = formatCaseName(searchParams.get("case") ?? "");
-  const roomId = requestedCase || LIVEBLOCKS_ROOM_ID;
 
+  if (!requestedCase) return <MissingCaseId />;
   if (!isLiveblocksConfigured) return <MissingLiveblocksConfiguration />;
 
   return (
     <RoomProvider
-      id={roomId}
+      id={requestedCase}
       initialPresence={{ x: null, y: null, agentId: "FIELD-UPLINK" }}
       initialStorage={createInitialEvidenceStorage}
     >
       <ClientSideSuspense fallback={<UplinkStorageFallback />}>
-        <UplinkInterface roomId={roomId} />
+        <UplinkInterface roomId={requestedCase} />
       </ClientSideSuspense>
     </RoomProvider>
   );

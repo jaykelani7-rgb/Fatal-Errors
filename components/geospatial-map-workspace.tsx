@@ -2,9 +2,9 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Maximize2, Pause, Play, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
-import Map, { Marker, type MapRef } from "react-map-gl/maplibre";
+import Map, { Marker } from "react-map-gl/maplibre";
 import { setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -398,9 +398,7 @@ export function GeospatialMapWorkspace() {
   const [viewMode, setViewMode] = useState<ViewMode>("2D");
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
-  const [isMapReady, setIsMapReady] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const mapRef = useRef<MapRef>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -436,28 +434,20 @@ export function GeospatialMapWorkspace() {
     bearing: 0,
   });
 
-  useEffect(() => {
-    if (!isMapReady) return;
-
+  const changeViewMode = useCallback((mode: ViewMode) => {
     const camera =
-      viewMode === "3D"
-        ? { pitch: 60, bearing: -15 }
-        : { pitch: 0, bearing: 0 };
+      mode === "3D" ? { pitch: 60, bearing: -15 } : { pitch: 0, bearing: 0 };
 
-    mapRef.current?.flyTo({
-      ...camera,
-      duration: 1500,
-      essential: true,
-    });
-
-    // DeckGL owns the controlled camera, so mirror the MapLibre transition.
+    setViewMode(mode);
+    // Deck.gl is the single camera owner. Running this on every click also lets
+    // the active button restore its intended camera after manual interaction.
     setViewState((current) => ({
       ...current,
       ...camera,
       transitionDuration: 1500,
       transitionInterpolator: new FlyToInterpolator(),
     }));
-  }, [isMapReady, viewMode]);
+  }, []);
 
   useEffect(() => {
     if (!mapPanRequest) return;
@@ -677,7 +667,7 @@ export function GeospatialMapWorkspace() {
   // Prevent WebGL crash by waiting for theme resolution
   if (!mounted || !resolvedTheme) {
     return (
-      <div className="relative w-full h-full min-h-[640px] bg-[#F4F4F0] dark:bg-[#01161E]" />
+      <div className="relative h-full min-h-0 w-full bg-[#F4F4F0] dark:bg-[#01161E]" />
     );
   }
 
@@ -693,6 +683,27 @@ export function GeospatialMapWorkspace() {
 
   const filterPanelContent = (
     <div className="space-y-2 p-3">
+      <div className="grid grid-cols-2 gap-2 border-b-2 border-[var(--ink)] pb-3 lg:hidden">
+        {(["PINS", "HEAT", "DENSITY", "ROUTES"] as ActiveLayerType[]).map(
+          (layer) => (
+            <button
+              key={layer}
+              type="button"
+              onClick={() => {
+                triggerHaptic("light");
+                setActiveLayer(layer);
+              }}
+              className={`min-h-11 border-2 border-[var(--ink)] px-2 py-2 text-left ${
+                activeLayer === layer
+                  ? "bg-[var(--ink)] text-[var(--paper)]"
+                  : "bg-[var(--panel)] text-[var(--ink)]"
+              }`}
+            >
+              [ {layer} ]
+            </button>
+          ),
+        )}
+      </div>
       {crimeTypes.map((crimeType) => {
         const count = filterCounts[crimeType];
         const incidentLabel = count === 1 ? "INCIDENT" : "INCIDENTS";
@@ -740,8 +751,12 @@ export function GeospatialMapWorkspace() {
 
   return (
     <div
-      className={`relative h-full min-h-0 w-full overflow-hidden bg-gray-900 md:h-[800px] md:min-h-[800px] md:rounded-xl ${
-        isFullscreenMap ? "fixed inset-0 z-50 min-h-screen" : ""
+      data-testid="geospatial-map"
+      data-view-mode={viewMode}
+      data-camera-pitch={Math.round(viewState.pitch)}
+      data-camera-bearing={Math.round(viewState.bearing)}
+      className={`relative h-full min-h-0 w-full overflow-hidden bg-gray-900 md:rounded-xl ${
+        isFullscreenMap ? "fixed inset-0 z-50 h-dvh" : ""
       }`}
     >
       <DeckGL
@@ -754,12 +769,10 @@ export function GeospatialMapWorkspace() {
         style={mapDimensions}
       >
         <Map
-          ref={mapRef}
           style={mapDimensions}
           mapStyle={currentMapStyle}
           reuseMaps={true}
           attributionControl={false}
-          onLoad={() => setIsMapReady(true)}
         >
           {activeLayer === "PINS" &&
             visibleIncidents.map((incident) => (
@@ -792,7 +805,7 @@ export function GeospatialMapWorkspace() {
               aria-pressed={isActive}
               onClick={() => {
                 triggerHaptic("light");
-                setViewMode(mode);
+                changeViewMode(mode);
               }}
               className={`px-3 py-2 sm:px-4 ${
                 isActive
@@ -807,7 +820,7 @@ export function GeospatialMapWorkspace() {
       </div>
 
       {/* Analysis layer toggle */}
-      <div className="absolute right-4 top-16 z-20 hidden border border-[#598392] font-mono text-xs font-black uppercase tracking-wide shadow-[4px_4px_0_rgba(1,22,30,0.8)] md:flex">
+      <div className="absolute right-4 top-16 z-20 hidden border border-[#598392] font-mono text-xs font-black uppercase tracking-wide shadow-[4px_4px_0_rgba(1,22,30,0.8)] lg:flex">
         {(["PINS", "HEAT", "DENSITY", "ROUTES"] as ActiveLayerType[]).map(
           (layer) => (
             <button
@@ -832,7 +845,10 @@ export function GeospatialMapWorkspace() {
       <div className="pointer-events-none absolute inset-0 border-4 border-[var(--ink)] z-30" />
 
       {/* Desktop filter drawer */}
-      <aside className="absolute left-4 top-4 z-10 hidden w-80 border-4 border-[var(--ink)] bg-[var(--paper)] font-mono text-xs font-black uppercase shadow-[6px_6px_0_var(--ink)] md:block">
+      <aside
+        data-testid="desktop-map-filters"
+        className="absolute left-4 top-4 z-10 hidden max-h-[calc(100%-2rem)] w-80 overflow-y-auto border-4 border-[var(--ink)] bg-[var(--paper)] font-mono text-xs font-black uppercase shadow-[6px_6px_0_var(--ink)] lg:block"
+      >
         <div className="border-b-4 border-[var(--ink)] bg-[var(--ink)] px-3 py-2 text-[var(--paper)]">
           Filter Drawer
         </div>
@@ -845,7 +861,7 @@ export function GeospatialMapWorkspace() {
           triggerHaptic("light");
           setIsMobileFiltersOpen(true);
         }}
-        className="absolute left-3 top-16 z-20 min-h-11 border-4 border-black bg-[#F4F4F0] px-3 font-mono text-[10px] font-black uppercase text-black shadow-[3px_3px_0_black] md:hidden dark:border dark:border-[#598392] dark:bg-[#01161E] dark:text-[#AEC3B0] dark:shadow-[0_0_12px_rgba(1,22,30,0.75)]"
+        className="absolute left-3 top-16 z-20 min-h-11 border-4 border-black bg-[#F4F4F0] px-3 font-mono text-[10px] font-black uppercase text-black shadow-[3px_3px_0_black] lg:hidden dark:border dark:border-[#598392] dark:bg-[#01161E] dark:text-[#AEC3B0] dark:shadow-[0_0_12px_rgba(1,22,30,0.75)]"
       >
         [ ACTIVE FILTERS ]
       </button>
@@ -856,14 +872,14 @@ export function GeospatialMapWorkspace() {
             <motion.button
               type="button"
               aria-label="Close active filters"
-              className="fixed inset-0 z-[85] bg-black/60 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-[85] bg-black/60 backdrop-blur-sm lg:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMobileFiltersOpen(false)}
             />
             <motion.aside
-              className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+4rem)] z-[90] max-h-[72dvh] overflow-y-auto border-t-4 border-black bg-[#F4F4F0] font-mono text-xs font-black uppercase shadow-[0_-4px_0_black] md:hidden dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0] dark:shadow-[0_-10px_28px_rgba(1,22,30,0.85)]"
+              className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+4rem)] z-[90] max-h-[72dvh] overflow-y-auto border-t-4 border-black bg-[#F4F4F0] font-mono text-xs font-black uppercase shadow-[0_-4px_0_black] md:bottom-8 lg:hidden dark:border-[#598392] dark:bg-[#01161E] dark:text-[#EFF6E0] dark:shadow-[0_-10px_28px_rgba(1,22,30,0.85)]"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -901,7 +917,10 @@ export function GeospatialMapWorkspace() {
       </button>
 
       {/* Playback bar */}
-      <div className="absolute bottom-3 left-3 right-3 z-10 border-4 border-[var(--ink)] bg-[var(--paper)] p-2 font-mono text-[10px] font-black uppercase shadow-[3px_3px_0_var(--ink)] md:bottom-4 md:left-[370px] md:right-4 md:p-3 md:text-xs md:shadow-[6px_6px_0_var(--ink)]">
+      <div
+        data-testid="map-playback"
+        className="absolute bottom-3 left-3 right-3 z-10 border-4 border-[var(--ink)] bg-[var(--paper)] p-2 font-mono text-[10px] font-black uppercase shadow-[3px_3px_0_var(--ink)] md:bottom-4 md:right-4 md:p-3 md:text-xs md:shadow-[6px_6px_0_var(--ink)] lg:left-[370px]"
+      >
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <button
             type="button"
