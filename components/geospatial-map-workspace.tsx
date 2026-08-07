@@ -2,9 +2,9 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Maximize2, Pause, Play, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
-import Map, { Marker, type MapRef } from "react-map-gl/maplibre";
+import Map, { Marker } from "react-map-gl/maplibre";
 import { setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -398,9 +398,7 @@ export function GeospatialMapWorkspace() {
   const [viewMode, setViewMode] = useState<ViewMode>("2D");
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
-  const [isMapReady, setIsMapReady] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const mapRef = useRef<MapRef>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -436,28 +434,20 @@ export function GeospatialMapWorkspace() {
     bearing: 0,
   });
 
-  useEffect(() => {
-    if (!isMapReady) return;
-
+  const changeViewMode = useCallback((mode: ViewMode) => {
     const camera =
-      viewMode === "3D"
-        ? { pitch: 60, bearing: -15 }
-        : { pitch: 0, bearing: 0 };
+      mode === "3D" ? { pitch: 60, bearing: -15 } : { pitch: 0, bearing: 0 };
 
-    mapRef.current?.flyTo({
-      ...camera,
-      duration: 1500,
-      essential: true,
-    });
-
-    // DeckGL owns the controlled camera, so mirror the MapLibre transition.
+    setViewMode(mode);
+    // Deck.gl is the single camera owner. Running this on every click also lets
+    // the active button restore its intended camera after manual interaction.
     setViewState((current) => ({
       ...current,
       ...camera,
       transitionDuration: 1500,
       transitionInterpolator: new FlyToInterpolator(),
     }));
-  }, [isMapReady, viewMode]);
+  }, []);
 
   useEffect(() => {
     if (!mapPanRequest) return;
@@ -762,6 +752,9 @@ export function GeospatialMapWorkspace() {
   return (
     <div
       data-testid="geospatial-map"
+      data-view-mode={viewMode}
+      data-camera-pitch={Math.round(viewState.pitch)}
+      data-camera-bearing={Math.round(viewState.bearing)}
       className={`relative h-full min-h-0 w-full overflow-hidden bg-gray-900 md:rounded-xl ${
         isFullscreenMap ? "fixed inset-0 z-50 h-dvh" : ""
       }`}
@@ -776,12 +769,10 @@ export function GeospatialMapWorkspace() {
         style={mapDimensions}
       >
         <Map
-          ref={mapRef}
           style={mapDimensions}
           mapStyle={currentMapStyle}
           reuseMaps={true}
           attributionControl={false}
-          onLoad={() => setIsMapReady(true)}
         >
           {activeLayer === "PINS" &&
             visibleIncidents.map((incident) => (
@@ -814,7 +805,7 @@ export function GeospatialMapWorkspace() {
               aria-pressed={isActive}
               onClick={() => {
                 triggerHaptic("light");
-                setViewMode(mode);
+                changeViewMode(mode);
               }}
               className={`px-3 py-2 sm:px-4 ${
                 isActive
